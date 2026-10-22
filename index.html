@@ -1,0 +1,487 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tili Store Stock Check</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: navy header band, sticky tally bar, brand sections of tappable item rows, fixed send bar at the bottom */
+:root{
+  --bg:#F3F5F9; --card:#FFFFFF; --fg:#1A2133; --muted:#667085; --line:#DCE1EA;
+  --navy:#1F2A44; --navy-fg:#FFFFFF; --gold:#C0951F; --band:#E7EBF3;
+  --ok:#2E7D32; --ok-bg:#E6F2E7; --no:#C62828; --no-bg:#FBE7E7; --low:#C77A00; --low-bg:#FFF1DB;
+  --display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F1420; --card:#171E2D; --fg:#E7EAF0; --muted:#98A2B3; --line:#2A3347;
+  --navy:#1A2338; --navy-fg:#FFFFFF; --gold:#D4AA3A; --band:#1E2739;
+  --ok:#5CB860; --ok-bg:#16301C; --no:#EF6A6A; --no-bg:#3A1A1D; --low:#F0A93A; --low-bg:#3A2A12; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1420; --card:#171E2D; --fg:#E7EAF0; --muted:#98A2B3; --line:#2A3347;
+  --navy:#1A2338; --navy-fg:#FFFFFF; --gold:#D4AA3A; --band:#1E2739;
+  --ok:#5CB860; --ok-bg:#16301C; --no:#EF6A6A; --no-bg:#3A1A1D; --low:#F0A93A; --low-bg:#3A2A12; color-scheme:dark}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+button,a,input{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.35;padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--navy)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{background:var(--navy);color:var(--navy-fg);border-bottom:3px solid var(--gold)}
+header .wrap{padding-block:18px 16px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+h1{font-family:var(--display);font-weight:700;font-size:24px;letter-spacing:.02em;margin:0;text-wrap:balance}
+.co{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.75;text-align:right}
+.info{display:grid;gap:10px;padding-block:16px 6px}
+.info label{display:grid;gap:4px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.info input{font:inherit;font-size:16px;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:11px 12px;width:100%}
+.info input:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:transparent}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tally{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.tally .wrap{padding-block:10px;display:grid;gap:8px}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.chip{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;padding:6px 4px;text-align:center;cursor:pointer;display:grid;gap:0}
+.chip b{font-family:var(--display);font-size:20px;font-variant-numeric:tabular-nums;line-height:1.1}
+.chip span{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.chip.ok b{color:var(--ok)} .chip.no b{color:var(--no)} .chip.low b{color:var(--low)}
+.chip[aria-pressed="true"]{border-color:var(--fg);box-shadow:inset 0 0 0 1px var(--fg)}
+.bar{height:5px;border-radius:3px;background:var(--line);display:flex;overflow:hidden}
+.bar i{display:block;height:100%}
+.search{font:inherit;font-size:16px;width:100%;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 12px}
+section{margin-top:14px}
+.bh{display:flex;justify-content:space-between;align-items:baseline;background:var(--band);border-left:3px solid var(--gold);padding:7px 10px;border-radius:6px 6px 0 0}
+.bh h2{font-family:var(--display);font-weight:700;font-size:16px;letter-spacing:.05em;margin:0}
+.bh small{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+ul{list-style:none;margin:0;padding:0;background:var(--card);border:1px solid var(--line);border-top:0;border-radius:0 0 8px 8px;overflow:hidden}
+li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 10px;border-top:1px solid var(--line)}
+li:first-child{border-top:0}
+li.s-ok{background:var(--ok-bg)} li.s-no{background:var(--no-bg)} li.s-low{background:var(--low-bg)}
+.nm{font-weight:500;font-size:14px;min-width:0;overflow-wrap:anywhere}
+.bc{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.bc em{font-style:normal;opacity:.7;margin-right:6px}
+.opts{display:flex;gap:5px}
+.opts button{font:inherit;font-family:var(--display);font-weight:700;font-size:13px;width:44px;height:40px;border-radius:8px;border:1.5px solid;background:var(--card);cursor:pointer;padding:0}
+.opts .ok{border-color:var(--ok);color:var(--ok)} .opts .no{border-color:var(--no);color:var(--no)} .opts .low{border-color:var(--low);color:var(--low)}
+.opts .ok[aria-pressed="true"]{background:var(--ok);color:#fff}
+.opts .no[aria-pressed="true"]{background:var(--no);color:#fff}
+.opts .low[aria-pressed="true"]{background:var(--low);color:#fff}
+button:focus-visible,.chip:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.empty{padding:28px 0;text-align:center;color:var(--muted)}
+.foot{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.foot .wrap{padding-block:10px;display:grid;grid-template-columns:auto 1fr;gap:8px}
+.btn{font:inherit;font-weight:600;font-size:15px;border-radius:10px;padding:12px 14px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer;text-align:center;text-decoration:none}
+.btn.main{background:var(--navy);color:var(--navy-fg);border-color:var(--navy)}
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(10,14,24,.55);display:grid;align-items:end}
+.sheet>div{background:var(--card);border-radius:14px 14px 0 0;max-height:85%;max-height:88dvh;overflow:auto;padding-block:16px calc(16px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:10px;max-width:640px;width:100%;margin:0 auto}
+.sheet h3{font-family:var(--display);font-size:19px;margin:0}
+.sheet pre{white-space:pre-wrap;font-family:var(--body);font-size:13px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;margin:0;max-height:40vh;overflow:auto;user-select:all}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.note{font-size:12.5px;color:var(--muted)}
+.warn{color:var(--no);font-size:13px;font-weight:600}
+@media (prefers-reduced-motion:no-preference){li{transition:background .15s}}
+.foot .wrap{grid-template-columns:auto auto minmax(0,1fr)}
+.btn.scanb{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-color:var(--gold);color:var(--fg)}
+.btn.scanb svg{width:20px;height:20px}
+.cam{position:relative;border-radius:10px;overflow:hidden;background:#000;aspect-ratio:4/3;max-height:46dvh;width:100%}
+.cam video{width:100%;height:100%;object-fit:cover;display:block}
+.cam .frame{position:absolute;left:10%;right:10%;top:32%;bottom:32%;border:2px solid var(--gold);border-radius:8px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+.cam .laser{position:absolute;left:12%;right:12%;top:50%;height:2px;background:#ff3b30;opacity:.85}
+@media (prefers-reduced-motion:no-preference){.cam .laser{animation:sweep 1.6s ease-in-out infinite alternate}@keyframes sweep{from{top:36%}to{top:64%}}}
+.torch{position:absolute;right:10px;bottom:10px;width:44px;height:44px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center;cursor:pointer}
+.torch svg{width:22px;height:22px}.torch[aria-pressed="true"]{background:var(--gold);color:#111}
+.status{font-size:13.5px;color:var(--muted);min-height:1.3em}
+.status.err{color:var(--no);font-weight:600}
+.typein{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.typein input{font:inherit;font-size:16px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:0;font-variant-numeric:tabular-nums}
+.filebtn{position:relative;overflow:hidden}
+.filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+.log{display:grid;gap:6px}
+.log h4{margin:6px 0 0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.log button{font:inherit;text-align:left;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:var(--fg);cursor:pointer}
+.log button span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.tag{font-family:var(--display);font-weight:700;font-size:12px;padding:2px 8px;border-radius:20px;border:1px solid var(--line);color:var(--muted)}
+.tag.ok{background:var(--ok);border-color:var(--ok);color:#fff}.tag.no{background:var(--no);border-color:var(--no);color:#fff}.tag.low{background:var(--low);border-color:var(--low);color:#fff}
+.hit{display:grid;gap:4px;padding:12px;border-radius:10px;background:var(--band);border-left:4px solid var(--gold)}
+.hit .b{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.hit .n{font-family:var(--display);font-weight:700;font-size:20px;line-height:1.15;overflow-wrap:anywhere}
+.hit .c{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.hit.miss{border-left-color:var(--no)}
+.big{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.big button{font:inherit;font-family:var(--display);font-weight:700;font-size:16px;height:56px;border-radius:10px;border:2px solid;background:var(--card);cursor:pointer;display:grid;place-items:center;line-height:1.05}
+.big button small{font-family:var(--body);font-weight:500;font-size:11px}
+.big .ok{border-color:var(--ok);color:var(--ok)}.big .no{border-color:var(--no);color:var(--no)}.big .low{border-color:var(--low);color:var(--low)}
+.big .ok[aria-pressed="true"]{background:var(--ok);color:#fff}.big .no[aria-pressed="true"]{background:var(--no);color:#fff}.big .low[aria-pressed="true"]{background:var(--low);color:#fff}
+li.flash{outline:3px solid var(--gold);outline-offset:-3px}
+@media (max-width:370px){.btn.scanb span{display:none}}
+.chips{max-width:640px}
+.tally .wrap{grid-template-columns:minmax(0,1fr)}
+/* small phones (iPhone SE, Galaxy mini, 320-370px) */
+@media (max-width:370px){
+  body{font-size:14px}
+  h1{font-size:20px} .co{font-size:10px}
+  .two{grid-template-columns:1fr}
+  .opts{gap:4px} .opts button{width:38px;height:38px;font-size:12px}
+  .nm{font-size:13px} .bc{font-size:11px}
+  .chip b{font-size:18px} .chip span{font-size:9.5px;letter-spacing:.03em}
+  li{padding:8px;gap:8px}
+}
+/* tablets and iPad: wider form, items flow in columns */
+@media (min-width:760px){
+  .info{grid-template-columns:2fr 1.4fr 1fr}
+  .info .two{display:contents}
+  .tally .wrap{grid-template-columns:auto minmax(220px,1fr);align-items:center;gap:14px}
+  .tally .bar{grid-column:1/-1;order:3}
+  .chips{width:min(560px,60vw)}
+  ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  li{border-top:1px solid var(--line)}
+  li:nth-child(-n+2){border-top:0}
+  li:nth-child(2n){border-left:1px solid var(--line)}
+  .foot .wrap{grid-template-columns:auto auto minmax(0,320px);justify-content:end}
+  .sheet{align-items:center;padding:24px}
+  .sheet>div{border-radius:14px;max-width:560px;max-height:80dvh}
+  h1{font-size:28px}
+}
+@media (min-width:1120px){
+  ul{grid-template-columns:repeat(3,minmax(0,1fr))}
+  li:nth-child(n){border-left:0;border-top:1px solid var(--line)}
+  li:nth-child(-n+3){border-top:0}
+  li:not(:nth-child(3n+1)){border-left:1px solid var(--line)}
+}
+/* phones turned sideways: short screens, keep the list visible */
+@media (max-height:520px) and (orientation:landscape){
+  .tally{position:static}
+  header .wrap{padding-block:10px}
+  h1{font-size:20px}
+  .info{padding-block:10px 4px}
+  .info input{padding:8px 10px}
+  .foot .wrap{padding-block:6px}
+  .btn{padding:9px 12px}
+  body{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+}
+
+</style>
+
+<header><div class="wrap"><h1>STORE STOCK CHECK</h1><div class="co">Tili Star Trading L.L.C<br>MSL · <span id="tot"></span> SKUs</div></div></header>
+
+<div class="wrap info">
+  <label for="store">Store name<input id="store" autocomplete="off" placeholder="e.g. Carrefour Al Zahia"></label>
+  <div class="two">
+    <label for="mname">Merchandiser<input id="mname" autocomplete="name" placeholder="Your name"></label>
+    <label for="mphone">Phone<input id="mphone" type="tel" autocomplete="tel" placeholder="05X XXX XXXX"></label>
+  </div>
+</div>
+
+<div class="tally"><div class="wrap">
+  <div class="chips" role="group" aria-label="Filter by status">
+    <button class="chip" data-f="todo" aria-pressed="false"><b id="c-todo">0</b><span>To check</span></button>
+    <button class="chip ok" data-f="ok" aria-pressed="false"><b id="c-ok">0</b><span>Available</span></button>
+    <button class="chip no" data-f="no" aria-pressed="false"><b id="c-no">0</b><span>Not avail.</span></button>
+    <button class="chip low" data-f="low" aria-pressed="false"><b id="c-low">0</b><span>Low</span></button>
+  </div>
+  <div class="bar" aria-hidden="true"><i id="b-ok" style="background:var(--ok)"></i><i id="b-no" style="background:var(--no)"></i><i id="b-low" style="background:var(--low)"></i></div>
+  <input id="q" class="search" type="search" placeholder="Search item or barcode" autocomplete="off">
+</div></div>
+
+<main class="wrap" id="list"></main>
+
+<div class="foot"><div class="wrap">
+  <button class="btn" id="reset">Clear</button>
+  <button class="btn scanb" id="scanbtn" aria-label="Scan barcode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M16 8v8"/></svg><span>Scan</span></button>
+  <button class="btn main" id="send">Send report</button>
+</div></div>
+
+<div class="sheet" id="sheet" hidden><div>
+  <h3 id="sh-title">Report</h3>
+  <p class="warn" id="sh-warn" hidden></p>
+  <pre id="report"></pre>
+  <div class="row">
+    <a class="btn main" id="wa" href="#" target="_blank" rel="noopener">WhatsApp</a>
+    <button class="btn" id="copy">Copy text</button>
+  </div>
+  <p class="note">If WhatsApp doesn't open, tap Copy text and paste it into the chat.</p>
+  <button class="btn" id="close">Back to list</button>
+</div></div>
+
+<div class="sheet" id="scan" hidden><div>
+  <h3>Scan barcode</h3>
+  <div class="cam" id="cam" hidden><video id="vid" playsinline muted autoplay></video><div class="frame"></div><div class="laser"></div><button class="torch" id="torch" hidden aria-pressed="false" aria-label="Flashlight"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></button></div>
+  <p class="status" id="sstat">Starting camera…</p>
+  <div class="row">
+    <label class="btn main filebtn" id="photobtn" for="photo" hidden>Take photo instead<input id="photo" type="file" accept="image/*" capture="environment"></label>
+    <button class="btn" id="retry" hidden>Try camera again</button>
+    <button class="btn" id="sclose">Close</button>
+  </div>
+  <p class="note" id="openlink" hidden></p>
+  <form class="typein" id="typeform"><input id="typed" inputmode="numeric" autocomplete="off" placeholder="Or type the barcode"><button class="btn" type="submit">Find</button></form>
+  <div class="log" id="log"></div>
+</div></div>
+
+<div class="sheet" id="found" hidden><div>
+  <div id="hit"></div>
+  <div class="big" id="bigbtns">
+    <button class="ok" data-k="ok">✓<small>Available</small></button>
+    <button class="no" data-k="no">✗<small>Not avail.</small></button>
+    <button class="low" data-k="low">LOW<small>Less stock</small></button>
+  </div>
+  <div class="row">
+    <button class="btn main" id="next">Scan next</button>
+    <button class="btn" id="showit">Show in list</button>
+  </div>
+  <button class="btn" id="fclose">Back to list</button>
+</div></div>
+
+<div class="sheet" id="confirm" hidden><div>
+  <h3>Clear all ticks?</h3>
+  <p class="note">This removes every answer on this phone. Store and name stay.</p>
+  <div class="row"><button class="btn" id="cancel">Keep</button><button class="btn main" id="doclear" style="background:var(--no);border-color:var(--no)">Clear all</button></div>
+</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+<script>
+const DATA = [["KÜCHE",[[1,"6224000045562","FLAMINGO MEXICAN BLZN HOT PUFFS 50G"],[2,"6224000045579","FLAMINGO CHILI & LEMON PUFFS 50G"],[3,"6224000045555","FLAMINGO SMOKED CHEESE PUFFS 50G"],[4,"6224000045067","FLAMINGO SWEET CHILI PUFFS 50G"],[5,"6224000045074","FLAMINGO ZESTY TOMATO PUFFS 50G"],[6,"6224000045050","FLAMINGO SEASONED CHEESE PUFFS 50G"],[7,"850079217003","SUNFLOWER SEEDS 35G"],[8,"850079217034","SUNFLOWER KERNELS 55G"],[9,"850079217058","REDSKIN PEANUTS 55G"],[10,"6296536403048","ROASTED SUNFLOWER SEEDS 125G"],[11,"850079217027","SUNFLOWER SEEDS 100G"],[12,"850079217041","SUNFLOWER KERNELS 125G"],[13,"850079217065","REDSKIN PEANUTS 125G"],[14,"6265663102339","LINA PIPE CHEESE PUFFS 20G"],[15,"6297675943013","DATES CHOCOLATE ASSORTED 250G"],[16,"6297675943167","REVE PISTACHIO WAFER ROLL 80G"],[17,"6297675943174","REVE ALMOND WAFER ROLL 80G"],[18,"6297675943402","SUNFLOWER SEEDS LEMON 120G"],[19,"6297675943440","MIX CORNS SALT/CHLI/CHESE 80G"],[20,"6297675943464","MIX NUTS CLASSIC RAW 80G"],[21,"6297675943426","MIX SEEDS PUMPKIN/SQUASH 80G"],[22,"6297675943488","JAPANESE RICE CRACKERS 70G"],[23,"6297675943501","PEANUTS IN SHELL 70G"],[24,"6297675943389","MIX PEANUTS BBQ/PLAIN/CTD 80G"],[25,"8908021078218","FIERY & CRUNCHY BALLS 60G"],[26,"8908021078096","CHEESE BALLS 60G"],[27,"6287014281128","KOREAN FLAVOUR 70G"],[28,"6287014280459","SWEET & SOUR 70G"],[29,"6287014280251","CHILI PEPPER & LEMON 70G"],[30,"6287014281302","HOT SAUCE FLAVOUR70G"],[31,"6297675943020","DATES CHOCOLATE MILK 250G"],[32,"6297675943037","DATES CHOCOLATE DARK 250G"],[33,"6297675943044","DATES CHOCOLATE COCONUT 250G"],[34,"6296536403086","DUBAI CHOCOLATE DARK 150G"],[35,"6296536403062","DUBAI CHOCOLATE MILK 150G"],[36,"6296536403093","DUBAI CHOCOLATE DARK 50G"],[37,"6296536403079","DUBAI CHOCOLATE MILK 50G"],[38,"6925374537232","PANDA POPZ 40G"],[39,"6296536403055","ROASTED SUNFLOWER SEEDS 55G"],[40,"6297675943556","DATECHOCOLATE KUNAFA MILK 80G"],[41,"6297675943570","DATECHOCOLATE KUNAFA DARK 80G"],[42,"6297675944492","DUBAI CHOCOLATE MILK 80G"],[43,"6297675944508","DUBAI CHOCOLATE DARK 80G"],[44,"6297675944478","DUBAI CHOCOLATE CAMEL MILK80G"],[45,"6297675944485","DUBAI CHOCOLT CAML MLK DRK80G"],[46,"6297675944638","DUBAI DARK CHOC NAS 80G"],[47,"6297675944614","DUBAI CHOC MLK NAS 80G"],[48,"6297675944676","DUBAI CHOC CML MLK NAS 80G"],[49,"6297675944652","DUBAI CHOC CML MLK NAS DRK80G"],[50,"6925374541154","PANDAPOPZ BIS STK CHOC DIP40G"],[51,"6925374541123","PANDAPOPZ CK STK CRM 40G"],[52,"6925374541147","PANDAPOPZ CARAM DIP 40G"],[53,"6925374541130","PANDAPOPZ CHOCO CRUNCH CON20G"],[54,"6297675943914","DUBAI CHOCOLATE SAFR DARK150G"],[55,"6297675943891","DUBAI CHOCOLATE SAFR MILK150G"],[56,"6297675944010","DUBAI CHOCODATE DARK150G"],[57,"6297675944027","DUBAI CHOCODATE MILK150G"],[58,"6297675944133","DUBAI CHOCOLATE AH DARK150G"],[59,"6297675944140","DUBAI CHOCOLATE AH MILK150G"],[60,"6297675943969","DUBAI CHOCOLATE SAFR DARK 50G"],[61,"6297675943952","DUBAI CHOCOLATE SAFR MILK 50G"],[62,"6297675944072","DUBAI CHOCODATE DARK 50G"],[63,"6297675944089","DUBAI CHOCODATE MILK 50G"],[64,"6297675944195","DUBAI CHOCOLATE AH DARK50G"],[65,"6297675944201","DUBAI CHOCOLATE AH MILK50G"],[66,"6297675943365","CHOCOREVAE WAFER HAZELNUT140G"],[67,"6297675943372","CHOCOREVAE WAFER COCONUT 140G"]]],["TAKIS",[[68,"757528050573","FUEGO BLUE HEATS 56G"],[69,"757528005276","FUEGO 56G"],[70,"757528008796","FUEGO 113G"],[71,"757528047528","FUEGO BLUE HEATS 113G"],[72,"7500810001592","FEGUO WAVES 70G"],[73,"757528008802","NITRO 113G"],[74,"757528005047","FUEGO 28G"],[75,"757528050580","FUEGO BLUE HEATS 200G"],[76,"757528010607","FUEGO CHURRITOS 113G"],[77,"757528050597","FUEGO 200G"],[78,"757528050177","FUEGO BLUE HEATS WAVES 70G"],[79,"757528046361","KETTLEZ 71G"],[80,"7500810001608","FEGUO WAVES 226G"],[81,"757528046682","FUEGO CRISPS 155G"],[82,"757528051945","BLUE HEATS CRISPS 155G"]]],["ALIEN'S SOUR",[[83,"6971635578827","JELLY STICK STW 96G"],[84,"6971635578834","JELLY STICK BLUBRY 96G"],[85,"6971635579343","LOLLIPOP 210G"],[86,"6971635578995","POPPING CANDY BRIES21G"],[87,"6971635579008","POPPING CANDY MIX 21G"],[88,"6971635579930","GUMIES WITH PEN STW55G"],[89,"6971635579589","GUMIES WITH PEN BLB55G"],[90,"6971635579619","TRI BLAST GEL 60G"],[91,"6971635580073","GUMBALL DISPENSER 40G"],[92,"6971635580004","GUMMY PIZZA&HOTDOG 10G"],[93,"6971635580103","GUMMY COLA & FRIES 10G"],[94,"6971635580776","SPACE GUMMY STW 100G"],[95,"6971635580769","SPACE GUMMY BLBR 100G"],[96,"6971635580899","GUMMY ROCKS STW 65G"],[97,"6971635580882","GUMMY ROCKS BLBR 65G"],[98,"6971635580868","STRAWS STW 55G"],[99,"6971635580028","TEETH CANDY STW 15G"],[100,"6971635580110","TEETH CANDY BLBR 15G"],[101,"6971635580875","STRAWS BLBR 55G"],[102,"6297675945383","ALIEN’S SOUR ROLLED SOUR TORTILLA CHIPS BRILLIANT BLUE FLAVOUR 40G"],[103,"6297675945376","ALIEN’S SOUR ROLLED SOUR TORTILLA CHIPS CHILLI & LEMON FLAVOR 40G"]]],["WARHEADS",[[104,"8435124856394","SUPER SOUR TRILO GEL 51G"],[105,"8435124857711","MINI BITE 80G"],[106,"8435124857186","BITES GUMMY 80G"],[107,"8435124856301","TWIST AND SHAKE 18G"],[108,"8435124857216","TONGUE SPLASH 40G"],[109,"8435124856363","SUPER SOUR GEL 20G"],[110,"8435124856332","THUMB DIPPERS 40G"]]],["HELLO KITTY",[[111,"6970642471138","LIPSTICK 6G"],[112,"840200004220","GUMBALL DISPENSER 20G"],[113,"6970642471145","WRIST BAND 8G"],[114,"6970642471152","CANDY LIP GLOSS 10G"],[115,"6970642471213","COIN BANK 30G"],[116,"9555030107010","MEGA LOLLIPOPS 135G"],[117,"9555030107287","PARTY PACK 90G"]]],["PEPPERMINT",[[118,"6921522307184","PAPERMINT FEEL COOL STAWBERRY 200MM"],[119,"6921522307191","PAPERMINT FEEL COOL MINT 200MM"],[120,"5425010096396","PAPERMINT COOL CAPS STAWBERRY 48G"],[121,"5425010092251","PAPERMINT COOL CAPS 48G"],[122,"5425010096013","PAPERMINT LEAVES 20G","5425010090226"]]],["CHARACTERS",[[123,"9001643217313","BARBIE FLASHING BAG 31G"],[124,"4004641217038","BARBIE BEAUTY CANDY 40G"],[125,"4004641221493","BARBIE MAKEUP KIT CANDIES 30G"],[126,"4004641217168","BARBIE SKATEBOARD CANDIES 12G"],[127,"4004641216703","BARBIE EGGS CANDIES 10G"],[128,"4004641216987","BARBIE SCOOTER 12G"],[129,"4004641216932","BARBIE CAMERA 12G"],[130,"4004641217151","BARBIE PRESSER BUTTON AIRPLANE 15G"]]],["MIOO",[[131,"6297675944515","DUBAI CHOCOLATE 200G"],[132,"6297675944737","WAFER ROLLS PISTACHIO 140G"],[133,"6297675944713","WAFER ROLLS ALMOND 140"],[134,"6914204005522","DUCK LIP POP 15G"],[135,"9814188000000","JELLY PICK & MIX 1KG"]]],["TAJIN",[[136,"633148100556","CLASICO SEASONING 400G"],[137,"633148100013","CLASICO SEASONING 142G"],[138,"633148104547","HABANERO SEASONING 45G"]]],["DECORIA",[[139,"8809102890265","MIOO ROSE JELLY LOLLIPOP 40G"],[140,"8809102890937","MIOO HEART JELLY LOLLIPOP 37G"],[141,"8809102890029","MIOO JELOMI JELLY LOLLIPOP 37G"]]],["BAIDA",[[142,"6952581460817","CANDY+LOLYPOP 18G"]]],["KITCHORA",[[143,"6297675943518","HOT SAUCE 88ML"],[144,"6297675943525","ORIG TOMATO KETCHUP340G"],[145,"6297675943532","HOT TOMATO KETCHUP 340G"],[146,"6297675943549","BBQ SAUCE 340G"]]],["TIME",[[147,"8691066111643","WAFER MASTER ROLLS HAZELNUT 120G"],[148,"8691066151625","WAFER MASTER ROLLS CHOCOLATE 120G"],[149,"8691066141027","WAFER MASTER MINIS HAZELNUT 120G"],[150,"8691066122526","WAFER MASTER MINIS CHOCOLATE 120G"],[151,"8691066180052","WAFER MASTER ROLLS HAZELNUT 65G"],[152,"8691066186054","WAFER MASTER ROLLS CHOCOLATE 65G"],[153,"8691066104553","WAFER MASTER CREPE HAZELNUT 65G"],[154,"8691066104959","WAFER MASTER CREPE CHOCOLATE 65G"],[155,"8691066219530","HAY HAY COCO QUATRO PACK 120G"],[156,"8691066239538","HEYO QUATRO PACK 120G"]]]];
+const ALL = DATA.flatMap(([b, its]) => its.map(([n, bc, nm, alt]) => ({n, bc, nm, b, alt})));
+const KEY = 'tili-msl-check-v1';
+let S = {}, filter = null;
+try { const d = JSON.parse(localStorage.getItem(KEY) || '{}'); S = d.s || {}; ['store','mname','mphone'].forEach(id => { if (d[id]) document.getElementById(id).value = d[id]; }); } catch (e) {}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify({s:S, store:store.value, mname:mname.value, mphone:mphone.value})); } catch (e) {} }
+document.getElementById('tot').textContent = ALL.length;
+const LBL = {ok:'✓', no:'✗', low:'LOW'};
+const list = document.getElementById('list');
+
+function render(){
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  let html = '', shown = 0;
+  for (const [b, its] of DATA) {
+    const rows = its.filter(([n, bc, nm]) => {
+      const st = S[n];
+      if (filter === 'todo' && st) return false;
+      if (filter && filter !== 'todo' && st !== filter) return false;
+      return !q || nm.toLowerCase().includes(q) || bc.includes(q);
+    });
+    if (!rows.length) continue;
+    shown += rows.length;
+    const done = its.filter(([n]) => S[n]).length;
+    html += `<section><div class="bh"><h2>${b}</h2><small>${done}/${its.length}</small></div><ul>` +
+      rows.map(([n, bc, nm]) => {
+        const st = S[n] || '';
+        return `<li class="${st ? 's-' + st : ''}" data-n="${n}"><div><div class="nm">${nm.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div><div class="bc"><em>${n}</em>${bc}</div></div>` +
+          `<div class="opts">${['ok','no','low'].map(k => `<button class="${k}" data-k="${k}" aria-pressed="${st===k}" aria-label="${{ok:'Available',no:'Not available',low:'Less stock'}[k]}">${LBL[k]}</button>`).join('')}</div></li>`;
+      }).join('') + `</ul></section>`;
+  }
+  list.innerHTML = html || `<p class="empty">No items here.</p>`;
+  tally();
+}
+function tally(){
+  const c = {ok:0, no:0, low:0}; ALL.forEach(i => { if (S[i.n]) c[S[i.n]]++; });
+  const done = c.ok + c.no + c.low;
+  document.getElementById('c-todo').textContent = ALL.length - done;
+  for (const k in c) { document.getElementById('c-' + k).textContent = c[k]; document.getElementById('b-' + k).style.width = (c[k] / ALL.length * 100) + '%'; }
+  return c;
+}
+list.addEventListener('click', e => {
+  const btn = e.target.closest('.opts button'); if (!btn) return;
+  const li = btn.closest('li'), n = +li.dataset.n, k = btn.dataset.k;
+  if (S[n] === k) delete S[n]; else S[n] = k;
+  save();
+  if (filter) { render(); return; }
+  li.className = S[n] ? 's-' + S[n] : '';
+  li.querySelectorAll('.opts button').forEach(b => b.setAttribute('aria-pressed', S[n] === b.dataset.k));
+  const sec = li.closest('section'), b = sec.querySelector('h2').textContent, its = DATA.find(d => d[0] === b)[1];
+  sec.querySelector('small').textContent = its.filter(([x]) => S[x]).length + '/' + its.length;
+  tally();
+});
+document.querySelectorAll('.chip').forEach(ch => ch.addEventListener('click', () => {
+  filter = filter === ch.dataset.f ? null : ch.dataset.f;
+  document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', x.dataset.f === filter));
+  render();
+}));
+document.getElementById('q').addEventListener('input', render);
+['store','mname','mphone'].forEach(id => document.getElementById(id).addEventListener('input', save));
+
+function report(){
+  const c = tally(), todo = ALL.length - c.ok - c.no - c.low;
+  const d = new Date(), ds = d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+  const sec = (k, title) => { const its = ALL.filter(i => S[i.n] === k); if (!its.length) return ''; let out = `\n*${title} (${its.length})*\n`, lb = '';
+    its.forEach(i => { if (i.b !== lb) { out += `_${i.b}_\n`; lb = i.b; } out += `• ${i.nm} — ${i.bc}\n`; }); return out; };
+  let t = `*STORE STOCK CHECK — Tili Star Trading*\nStore: ${store.value || '-'}\nMerchandiser: ${mname.value || '-'}\nPhone: ${mphone.value || '-'}\nDate: ${ds}\n\n` +
+    `✓ Available: ${c.ok}\n✗ Not available: ${c.no}\nLOW Less stock: ${c.low}\nNot checked: ${todo}\n` + sec('no', '✗ NOT AVAILABLE') + sec('low', 'LOW STOCK');
+  return {t, todo};
+}
+const sheet = document.getElementById('sheet');
+document.getElementById('send').addEventListener('click', () => {
+  const {t, todo} = report();
+  document.getElementById('report').textContent = t;
+  const w = document.getElementById('sh-warn'), miss = [];
+  if (!store.value.trim()) miss.push('store name'); if (!mname.value.trim()) miss.push('your name');
+  const msgs = []; if (miss.length) msgs.push('Add ' + miss.join(' and ') + ' at the top.'); if (todo) msgs.push(todo + ' items not checked yet.');
+  w.textContent = msgs.join(' '); w.hidden = !msgs.length;
+  document.getElementById('wa').href = 'https://wa.me/?text=' + encodeURIComponent(t);
+  sheet.hidden = false;
+});
+document.getElementById('close').addEventListener('click', () => sheet.hidden = true);
+document.getElementById('copy').addEventListener('click', e => {
+  const b = e.currentTarget, t = document.getElementById('report').textContent;
+  const done = () => { b.textContent = 'Copied'; setTimeout(() => b.textContent = 'Copy text', 1600); };
+  try { navigator.clipboard.writeText(t).then(done, sel); } catch (er) { sel(); }
+  function sel(){ const r = document.createRange(); r.selectNodeContents(document.getElementById('report')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = 'Selected: copy it'; }
+});
+const conf = document.getElementById('confirm');
+document.getElementById('reset').addEventListener('click', () => conf.hidden = false);
+document.getElementById('cancel').addEventListener('click', () => conf.hidden = true);
+document.getElementById('doclear').addEventListener('click', () => { S = {}; save(); conf.hidden = true; filter = null; document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', false)); render(); });
+[sheet, conf, document.getElementById("found")].forEach(s => s.addEventListener('click', e => { if (e.target === s) s.hidden = true; }));
+const store = document.getElementById('store'), mname = document.getElementById('mname'), mphone = document.getElementById('mphone');
+render();
+
+/* ---------- barcode scanning ---------- */
+const norm = v => String(v || '').replace(/\D/g, '').replace(/^0+/, '');
+const BYCODE = new Map();
+ALL.forEach(i => { BYCODE.set(norm(i.bc), i); if (i.alt) BYCODE.set(norm(i.alt), i); });
+const scanS = document.getElementById('scan'), foundS = document.getElementById('found');
+const vid = document.getElementById('vid'), cam = document.getElementById('cam'), sstat = document.getElementById('sstat');
+let stream = null, loop = null, busy = false, cur = null, LOG = [];
+const FORMATS = ['ean_13','ean_8','upc_a','upc_e','code_128'];
+let detector = null;
+try { if ('BarcodeDetector' in window) detector = new BarcodeDetector({formats: FORMATS}); } catch (e) { detector = null; }
+let zx = null;
+function zxReader(){
+  if (zx || !window.ZXing) return zx;
+  const Z = window.ZXing, h = new Map();
+  h.set(Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A, Z.BarcodeFormat.UPC_E, Z.BarcodeFormat.CODE_128]);
+  h.set(Z.DecodeHintType.TRY_HARDER, true);
+  zx = new Z.MultiFormatReader(); zx.setHints(h); return zx;
+}
+async function decodeCanvas(cv){
+  if (detector) { try { const r = await detector.detect(cv); if (r && r.length) return r[0].rawValue; } catch (e) {} }
+  const R = zxReader(); if (!R) return null;
+  const Z = window.ZXing;
+  try { return R.decodeWithState(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(cv)))).getText(); }
+  catch (e) { try { R.reset(); } catch (_) {} return null; }
+}
+function setStat(t, err){ sstat.textContent = t; sstat.className = 'status' + (err ? ' err' : ''); }
+function stopCam(){ try { torchB.hidden = true; } catch (e) {} if (loop) clearInterval(loop); loop = null; if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; vid.srcObject = null; cam.hidden = true; }
+async function openScan(){
+  scanS.hidden = false; renderLog(); document.getElementById('typed').value = '';
+  document.getElementById('photobtn').hidden = true; document.getElementById('retry').hidden = true; document.getElementById('openlink').hidden = true; torchB.hidden = true;
+  if (!detector && !window.ZXing) setStat('Scanner needs internet to load. You can still type the barcode.', true);
+  else setStat('Starting camera…');
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('nocam');
+    stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: 'environment'}, width: {ideal: 1280}, height: {ideal: 720}}, audio: false});
+    if (scanS.hidden) { stopCam(); return; }
+    vid.srcObject = stream; await vid.play(); cam.hidden = false;
+    setStat('Point the camera at the barcode.');
+    const cv = document.createElement('canvas'), cx = cv.getContext('2d', {willReadFrequently: true});
+    loop = setInterval(async () => {
+      if (busy || !vid.videoWidth) return; busy = true;
+      const w = vid.videoWidth, h = vid.videoHeight, cw = Math.round(w * .8), ch = Math.round(h * .5);
+      cv.width = cw; cv.height = ch; cx.drawImage(vid, (w - cw) / 2, (h - ch) / 2, cw, ch, 0, 0, cw, ch);
+      const code = await decodeCanvas(cv); busy = false;
+      if (code) { stopCam(); hit(code); }
+    }, detector ? 200 : 350);
+    const tr = stream.getVideoTracks()[0], caps = tr.getCapabilities ? tr.getCapabilities() : {};
+    if (caps.torch) { torchB.hidden = false; torchB.setAttribute('aria-pressed', false); }
+    if (caps.focusMode && caps.focusMode.includes('continuous')) { try { await tr.applyConstraints({advanced: [{focusMode: 'continuous'}]}); } catch (e) {} }
+  } catch (e) {
+    stopCam(); camFail(e);
+  }
+}
+const torchB = document.getElementById('torch');
+torchB.addEventListener('click', async () => {
+  const tr = stream && stream.getVideoTracks()[0]; if (!tr) return;
+  const on = torchB.getAttribute('aria-pressed') !== 'true';
+  try { await tr.applyConstraints({advanced: [{torch: on}]}); torchB.setAttribute('aria-pressed', on); } catch (e) {}
+});
+const HOME = 'https://jnxp2024.github.io/tili/';
+function camFail(e){
+  const framed = window.self !== window.top, denied = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
+  let msg = 'Camera could not start.';
+  if (denied && !framed) msg = 'Camera permission is blocked. Allow camera for this site in your browser settings, then tap Try camera again.';
+  else if (framed || location.protocol === 'file:') msg = 'Live camera does not work in this view.';
+  if (!sstat.classList.contains('err')) setStat(msg, true);
+  document.getElementById('photobtn').hidden = false; document.getElementById('retry').hidden = !(denied && !framed);
+  const ol = document.getElementById('openlink');
+  if (HOME.startsWith('http') && location.href.indexOf(HOME) !== 0) { ol.innerHTML = 'For live scanning open: <b style="user-select:all">' + HOME + '</b>'; ol.hidden = false; } else ol.hidden = true;
+}
+async function fromPhoto(file){
+  if (!file) return;
+  setStat('Reading barcode…');
+  try {
+    const img = await new Promise((ok, bad) => { const u = URL.createObjectURL(file), im = new Image(); im.onload = () => { URL.revokeObjectURL(u); ok(im); }; im.onerror = bad; im.src = u; });
+    const tries = [[1, 0, 0, 1, 1], [1, .2, .25, .6, .5], [0, 0, 0, 1, 1]];
+    for (const scale of [1600, 1000]) {
+      for (const rot of [0, 90]) {
+        const s = Math.min(1, scale / Math.max(img.width, img.height)), cv = document.createElement('canvas'), cx = cv.getContext('2d', {willReadFrequently: true});
+        const W = Math.round(img.width * s), H = Math.round(img.height * s);
+        cv.width = rot ? H : W; cv.height = rot ? W : H;
+        if (rot) { cx.translate(H, 0); cx.rotate(Math.PI / 2); }
+        cx.drawImage(img, 0, 0, W, H);
+        const code = await decodeCanvas(cv);
+        if (code) { hit(code); return; }
+      }
+    }
+    setStat('Could not read the barcode. Take it again closer, flat and in good light, or type it.', true);
+  } catch (e) { setStat('Could not open that photo. Try again or type the barcode.', true); }
+  finally { document.getElementById('photo').value = ''; }
+}
+function hit(code){
+  const item = BYCODE.get(norm(code));
+  if (navigator.vibrate) { try { navigator.vibrate(item ? 60 : [60, 60, 60]); } catch (e) {} }
+  LOG = [{code: String(code).replace(/\D/g, '') || code, n: item ? item.n : null}].concat(LOG.filter(x => x.code !== code)).slice(0, 8);
+  showFound(item, code);
+}
+function esc(t){ return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+function showFound(item, code){
+  cur = item; scanS.hidden = true; stopCam();
+  const hitEl = document.getElementById('hit'), big = document.getElementById('bigbtns');
+  if (item) {
+    hitEl.innerHTML = `<div class="hit"><span class="b">${esc(item.b)} · #${item.n}</span><span class="n">${esc(item.nm)}</span><span class="c">${item.bc}</span></div>`;
+    big.hidden = false; document.getElementById('showit').hidden = false; syncBig();
+  } else {
+    hitEl.innerHTML = `<div class="hit miss"><span class="b">Not in MSL list</span><span class="n">No item with this barcode</span><span class="c">${esc(code)}</span></div>`;
+    big.hidden = true; document.getElementById('showit').hidden = true;
+  }
+  foundS.hidden = false;
+}
+function syncBig(){ document.querySelectorAll('#bigbtns button').forEach(b => b.setAttribute('aria-pressed', !!cur && S[cur.n] === b.dataset.k)); }
+document.getElementById('bigbtns').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || !cur) return;
+  if (S[cur.n] === b.dataset.k) delete S[cur.n]; else S[cur.n] = b.dataset.k;
+  save(); syncBig(); render();
+});
+function renderLog(){
+  const el = document.getElementById('log');
+  if (!LOG.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<h4>Recent scans</h4>' + LOG.map((x, i) => {
+    const it = x.n ? ALL.find(a => a.n === x.n) : null, st = it ? S[it.n] : null;
+    return `<button data-i="${i}"><span>${it ? esc(it.nm) : 'Not in list · ' + esc(x.code)}</span><span class="tag ${st || ''}">${st ? LBL[st] : (it ? '–' : '?')}</span></button>`;
+  }).join('');
+}
+document.getElementById('log').addEventListener('click', e => {
+  const b = e.target.closest('button[data-i]'); if (!b) return;
+  const x = LOG[+b.dataset.i]; showFound(x.n ? ALL.find(a => a.n === x.n) : null, x.code);
+});
+document.getElementById('scanbtn').addEventListener('click', openScan);
+document.getElementById('retry').addEventListener('click', openScan);
+document.getElementById('next').addEventListener('click', () => { foundS.hidden = true; openScan(); });
+document.getElementById('fclose').addEventListener('click', () => { foundS.hidden = true; });
+document.getElementById('sclose').addEventListener('click', () => { scanS.hidden = true; stopCam(); });
+scanS.addEventListener('click', e => { if (e.target === scanS) { scanS.hidden = true; stopCam(); } });
+document.getElementById('photo').addEventListener('change', e => { stopCam(); fromPhoto(e.target.files[0]); });
+document.getElementById('typeform').addEventListener('submit', e => { e.preventDefault(); const v = document.getElementById('typed').value.trim(); if (v) hit(v); });
+document.getElementById('showit').addEventListener('click', () => {
+  if (!cur) return; foundS.hidden = true;
+  if (filter || document.getElementById('q').value) { filter = null; document.getElementById('q').value = ''; document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', false)); render(); }
+  const li = list.querySelector(`li[data-n="${cur.n}"]`);
+  if (li) { li.scrollIntoView({block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'}); li.classList.add('flash'); setTimeout(() => li.classList.remove('flash'), 1800); }
+});
+/* handheld scanners and typed barcodes in the search box */
+document.getElementById('q').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return; const v = e.target.value.trim();
+  if (/^\d{6,14}$/.test(v)) { e.preventDefault(); hit(v); e.target.value = ''; render(); }
+});
+document.getElementById('q').addEventListener('input', e => {
+  const v = e.target.value.trim(); if (/^\d{8,14}$/.test(v) && BYCODE.has(norm(v))) { hit(v); e.target.value = ''; render(); }
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden) stopCam(); });
+</script>

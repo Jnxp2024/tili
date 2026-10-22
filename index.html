@@ -114,6 +114,19 @@ button:focus-visible,.chip:focus-visible{outline:2px solid var(--gold);outline-o
 li.flash{outline:3px solid var(--gold);outline-offset:-3px}
 @media (max-width:370px){.btn.scanb span{display:none}}
 .chips{max-width:640px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;background:var(--card);border:1px solid var(--line);border-radius:10px;grid-column:1/-1}
+.tabs button{font:inherit;font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.03em;border:0;border-radius:8px;padding:9px 6px;background:transparent;color:var(--muted);cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--navy);color:var(--navy-fg)}
+.qty{width:96px;font:inherit;font-size:17px;font-weight:600;text-align:center;padding:8px 6px;border:1.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);font-variant-numeric:tabular-nums;-moz-appearance:textfield;appearance:textfield}
+.qty::-webkit-outer-spin-button,.qty::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.qty::placeholder{color:var(--muted);font-weight:400;font-size:14px}
+.qty:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:transparent}
+li.s-ok .qty{border-color:var(--ok)} li.s-no .qty{border-color:var(--no)}
+.qtyform{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end}
+.qtyform label{display:grid;gap:4px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.qtyform input{width:100%;font:inherit;font-size:24px;font-weight:700;text-align:center;padding:10px;border:2px solid var(--gold);border-radius:10px;background:var(--card);color:var(--fg);font-variant-numeric:tabular-nums}
+.qtyform .btn{height:58px;min-width:96px}
+@media (max-width:370px){.qty{width:76px;font-size:16px}}
 .tally .wrap{grid-template-columns:minmax(0,1fr)}
 /* small phones (iPhone SE, Galaxy mini, 320-370px) */
 @media (max-width:370px){
@@ -172,11 +185,12 @@ li.flash{outline:3px solid var(--gold);outline-offset:-3px}
 </div>
 
 <div class="tally"><div class="wrap">
+  <div class="tabs" role="tablist" aria-label="Report type"><button role="tab" id="t-avail" data-m="avail" aria-selected="true">Availability</button><button role="tab" id="t-stock" data-m="stock" aria-selected="false">Stock report</button></div>
   <div class="chips" role="group" aria-label="Filter by status">
-    <button class="chip" data-f="todo" aria-pressed="false"><b id="c-todo">0</b><span>To check</span></button>
-    <button class="chip ok" data-f="ok" aria-pressed="false"><b id="c-ok">0</b><span>Available</span></button>
-    <button class="chip no" data-f="no" aria-pressed="false"><b id="c-no">0</b><span>Not avail.</span></button>
-    <button class="chip low" data-f="low" aria-pressed="false"><b id="c-low">0</b><span>Low</span></button>
+    <button class="chip" data-f="todo" aria-pressed="false"><b id="c-todo">0</b><span id="l-todo">To check</span></button>
+    <button class="chip ok" data-f="ok" aria-pressed="false"><b id="c-ok">0</b><span id="l-ok">Available</span></button>
+    <button class="chip no" data-f="no" aria-pressed="false"><b id="c-no">0</b><span id="l-no">Not avail.</span></button>
+    <button class="chip low" data-f="low" aria-pressed="false"><b id="c-low">0</b><span id="l-low">Low</span></button>
   </div>
   <div class="bar" aria-hidden="true"><i id="b-ok" style="background:var(--ok)"></i><i id="b-no" style="background:var(--no)"></i><i id="b-low" style="background:var(--low)"></i></div>
   <input id="q" class="search" type="search" placeholder="Search item or barcode" autocomplete="off">
@@ -223,6 +237,7 @@ li.flash{outline:3px solid var(--gold);outline-offset:-3px}
     <button class="no" data-k="no">✗<small>Not avail.</small></button>
     <button class="low" data-k="low">LOW<small>Less stock</small></button>
   </div>
+  <form class="qtyform" id="qtyform" hidden><label for="fqty">Stock quantity (pcs)<input id="fqty" type="number" inputmode="numeric" min="0" step="1" autocomplete="off" placeholder="0"></label><button class="btn main" type="submit">Save</button></form>
   <div class="row">
     <button class="btn main" id="next">Scan next</button>
     <button class="btn" id="showit">Show in list</button>
@@ -231,8 +246,8 @@ li.flash{outline:3px solid var(--gold);outline-offset:-3px}
 </div></div>
 
 <div class="sheet" id="confirm" hidden><div>
-  <h3>Clear all ticks?</h3>
-  <p class="note">This removes every answer on this phone. Store and name stay.</p>
+  <h3 id="cf-t">Clear all ticks?</h3>
+  <p class="note" id="cf-n">This removes every answer on this phone. Store and name stay.</p>
   <div class="row"><button class="btn" id="cancel">Keep</button><button class="btn main" id="doclear" style="background:var(--no);border-color:var(--no)">Clear all</button></div>
 </div></div>
 
@@ -241,37 +256,56 @@ li.flash{outline:3px solid var(--gold);outline-offset:-3px}
 const DATA = [["KÜCHE",[[1,"6224000045562","FLAMINGO MEXICAN BLZN HOT PUFFS 50G"],[2,"6224000045579","FLAMINGO CHILI & LEMON PUFFS 50G"],[3,"6224000045555","FLAMINGO SMOKED CHEESE PUFFS 50G"],[4,"6224000045067","FLAMINGO SWEET CHILI PUFFS 50G"],[5,"6224000045074","FLAMINGO ZESTY TOMATO PUFFS 50G"],[6,"6224000045050","FLAMINGO SEASONED CHEESE PUFFS 50G"],[7,"850079217003","SUNFLOWER SEEDS 35G"],[8,"850079217034","SUNFLOWER KERNELS 55G"],[9,"850079217058","REDSKIN PEANUTS 55G"],[10,"6296536403048","ROASTED SUNFLOWER SEEDS 125G"],[11,"850079217027","SUNFLOWER SEEDS 100G"],[12,"850079217041","SUNFLOWER KERNELS 125G"],[13,"850079217065","REDSKIN PEANUTS 125G"],[14,"6265663102339","LINA PIPE CHEESE PUFFS 20G"],[15,"6297675943013","DATES CHOCOLATE ASSORTED 250G"],[16,"6297675943167","REVE PISTACHIO WAFER ROLL 80G"],[17,"6297675943174","REVE ALMOND WAFER ROLL 80G"],[18,"6297675943402","SUNFLOWER SEEDS LEMON 120G"],[19,"6297675943440","MIX CORNS SALT/CHLI/CHESE 80G"],[20,"6297675943464","MIX NUTS CLASSIC RAW 80G"],[21,"6297675943426","MIX SEEDS PUMPKIN/SQUASH 80G"],[22,"6297675943488","JAPANESE RICE CRACKERS 70G"],[23,"6297675943501","PEANUTS IN SHELL 70G"],[24,"6297675943389","MIX PEANUTS BBQ/PLAIN/CTD 80G"],[25,"8908021078218","FIERY & CRUNCHY BALLS 60G"],[26,"8908021078096","CHEESE BALLS 60G"],[27,"6287014281128","KOREAN FLAVOUR 70G"],[28,"6287014280459","SWEET & SOUR 70G"],[29,"6287014280251","CHILI PEPPER & LEMON 70G"],[30,"6287014281302","HOT SAUCE FLAVOUR70G"],[31,"6297675943020","DATES CHOCOLATE MILK 250G"],[32,"6297675943037","DATES CHOCOLATE DARK 250G"],[33,"6297675943044","DATES CHOCOLATE COCONUT 250G"],[34,"6296536403086","DUBAI CHOCOLATE DARK 150G"],[35,"6296536403062","DUBAI CHOCOLATE MILK 150G"],[36,"6296536403093","DUBAI CHOCOLATE DARK 50G"],[37,"6296536403079","DUBAI CHOCOLATE MILK 50G"],[38,"6925374537232","PANDA POPZ 40G"],[39,"6296536403055","ROASTED SUNFLOWER SEEDS 55G"],[40,"6297675943556","DATECHOCOLATE KUNAFA MILK 80G"],[41,"6297675943570","DATECHOCOLATE KUNAFA DARK 80G"],[42,"6297675944492","DUBAI CHOCOLATE MILK 80G"],[43,"6297675944508","DUBAI CHOCOLATE DARK 80G"],[44,"6297675944478","DUBAI CHOCOLATE CAMEL MILK80G"],[45,"6297675944485","DUBAI CHOCOLT CAML MLK DRK80G"],[46,"6297675944638","DUBAI DARK CHOC NAS 80G"],[47,"6297675944614","DUBAI CHOC MLK NAS 80G"],[48,"6297675944676","DUBAI CHOC CML MLK NAS 80G"],[49,"6297675944652","DUBAI CHOC CML MLK NAS DRK80G"],[50,"6925374541154","PANDAPOPZ BIS STK CHOC DIP40G"],[51,"6925374541123","PANDAPOPZ CK STK CRM 40G"],[52,"6925374541147","PANDAPOPZ CARAM DIP 40G"],[53,"6925374541130","PANDAPOPZ CHOCO CRUNCH CON20G"],[54,"6297675943914","DUBAI CHOCOLATE SAFR DARK150G"],[55,"6297675943891","DUBAI CHOCOLATE SAFR MILK150G"],[56,"6297675944010","DUBAI CHOCODATE DARK150G"],[57,"6297675944027","DUBAI CHOCODATE MILK150G"],[58,"6297675944133","DUBAI CHOCOLATE AH DARK150G"],[59,"6297675944140","DUBAI CHOCOLATE AH MILK150G"],[60,"6297675943969","DUBAI CHOCOLATE SAFR DARK 50G"],[61,"6297675943952","DUBAI CHOCOLATE SAFR MILK 50G"],[62,"6297675944072","DUBAI CHOCODATE DARK 50G"],[63,"6297675944089","DUBAI CHOCODATE MILK 50G"],[64,"6297675944195","DUBAI CHOCOLATE AH DARK50G"],[65,"6297675944201","DUBAI CHOCOLATE AH MILK50G"],[66,"6297675943365","CHOCOREVAE WAFER HAZELNUT140G"],[67,"6297675943372","CHOCOREVAE WAFER COCONUT 140G"]]],["TAKIS",[[68,"757528050573","FUEGO BLUE HEATS 56G"],[69,"757528005276","FUEGO 56G"],[70,"757528008796","FUEGO 113G"],[71,"757528047528","FUEGO BLUE HEATS 113G"],[72,"7500810001592","FEGUO WAVES 70G"],[73,"757528008802","NITRO 113G"],[74,"757528005047","FUEGO 28G"],[75,"757528050580","FUEGO BLUE HEATS 200G"],[76,"757528010607","FUEGO CHURRITOS 113G"],[77,"757528050597","FUEGO 200G"],[78,"757528050177","FUEGO BLUE HEATS WAVES 70G"],[79,"757528046361","KETTLEZ 71G"],[80,"7500810001608","FEGUO WAVES 226G"],[81,"757528046682","FUEGO CRISPS 155G"],[82,"757528051945","BLUE HEATS CRISPS 155G"]]],["ALIEN'S SOUR",[[83,"6971635578827","JELLY STICK STW 96G"],[84,"6971635578834","JELLY STICK BLUBRY 96G"],[85,"6971635579343","LOLLIPOP 210G"],[86,"6971635578995","POPPING CANDY BRIES21G"],[87,"6971635579008","POPPING CANDY MIX 21G"],[88,"6971635579930","GUMIES WITH PEN STW55G"],[89,"6971635579589","GUMIES WITH PEN BLB55G"],[90,"6971635579619","TRI BLAST GEL 60G"],[91,"6971635580073","GUMBALL DISPENSER 40G"],[92,"6971635580004","GUMMY PIZZA&HOTDOG 10G"],[93,"6971635580103","GUMMY COLA & FRIES 10G"],[94,"6971635580776","SPACE GUMMY STW 100G"],[95,"6971635580769","SPACE GUMMY BLBR 100G"],[96,"6971635580899","GUMMY ROCKS STW 65G"],[97,"6971635580882","GUMMY ROCKS BLBR 65G"],[98,"6971635580868","STRAWS STW 55G"],[99,"6971635580028","TEETH CANDY STW 15G"],[100,"6971635580110","TEETH CANDY BLBR 15G"],[101,"6971635580875","STRAWS BLBR 55G"],[102,"6297675945383","ALIEN’S SOUR ROLLED SOUR TORTILLA CHIPS BRILLIANT BLUE FLAVOUR 40G"],[103,"6297675945376","ALIEN’S SOUR ROLLED SOUR TORTILLA CHIPS CHILLI & LEMON FLAVOR 40G"]]],["WARHEADS",[[104,"8435124856394","SUPER SOUR TRILO GEL 51G"],[105,"8435124857711","MINI BITE 80G"],[106,"8435124857186","BITES GUMMY 80G"],[107,"8435124856301","TWIST AND SHAKE 18G"],[108,"8435124857216","TONGUE SPLASH 40G"],[109,"8435124856363","SUPER SOUR GEL 20G"],[110,"8435124856332","THUMB DIPPERS 40G"]]],["HELLO KITTY",[[111,"6970642471138","LIPSTICK 6G"],[112,"840200004220","GUMBALL DISPENSER 20G"],[113,"6970642471145","WRIST BAND 8G"],[114,"6970642471152","CANDY LIP GLOSS 10G"],[115,"6970642471213","COIN BANK 30G"],[116,"9555030107010","MEGA LOLLIPOPS 135G"],[117,"9555030107287","PARTY PACK 90G"]]],["PEPPERMINT",[[118,"6921522307184","PAPERMINT FEEL COOL STAWBERRY 200MM"],[119,"6921522307191","PAPERMINT FEEL COOL MINT 200MM"],[120,"5425010096396","PAPERMINT COOL CAPS STAWBERRY 48G"],[121,"5425010092251","PAPERMINT COOL CAPS 48G"],[122,"5425010096013","PAPERMINT LEAVES 20G","5425010090226"]]],["CHARACTERS",[[123,"9001643217313","BARBIE FLASHING BAG 31G"],[124,"4004641217038","BARBIE BEAUTY CANDY 40G"],[125,"4004641221493","BARBIE MAKEUP KIT CANDIES 30G"],[126,"4004641217168","BARBIE SKATEBOARD CANDIES 12G"],[127,"4004641216703","BARBIE EGGS CANDIES 10G"],[128,"4004641216987","BARBIE SCOOTER 12G"],[129,"4004641216932","BARBIE CAMERA 12G"],[130,"4004641217151","BARBIE PRESSER BUTTON AIRPLANE 15G"]]],["MIOO",[[131,"6297675944515","DUBAI CHOCOLATE 200G"],[132,"6297675944737","WAFER ROLLS PISTACHIO 140G"],[133,"6297675944713","WAFER ROLLS ALMOND 140"],[134,"6914204005522","DUCK LIP POP 15G"],[135,"9814188000000","JELLY PICK & MIX 1KG"]]],["TAJIN",[[136,"633148100556","CLASICO SEASONING 400G"],[137,"633148100013","CLASICO SEASONING 142G"],[138,"633148104547","HABANERO SEASONING 45G"]]],["DECORIA",[[139,"8809102890265","MIOO ROSE JELLY LOLLIPOP 40G"],[140,"8809102890937","MIOO HEART JELLY LOLLIPOP 37G"],[141,"8809102890029","MIOO JELOMI JELLY LOLLIPOP 37G"]]],["BAIDA",[[142,"6952581460817","CANDY+LOLYPOP 18G"]]],["KITCHORA",[[143,"6297675943518","HOT SAUCE 88ML"],[144,"6297675943525","ORIG TOMATO KETCHUP340G"],[145,"6297675943532","HOT TOMATO KETCHUP 340G"],[146,"6297675943549","BBQ SAUCE 340G"]]],["TIME",[[147,"8691066111643","WAFER MASTER ROLLS HAZELNUT 120G"],[148,"8691066151625","WAFER MASTER ROLLS CHOCOLATE 120G"],[149,"8691066141027","WAFER MASTER MINIS HAZELNUT 120G"],[150,"8691066122526","WAFER MASTER MINIS CHOCOLATE 120G"],[151,"8691066180052","WAFER MASTER ROLLS HAZELNUT 65G"],[152,"8691066186054","WAFER MASTER ROLLS CHOCOLATE 65G"],[153,"8691066104553","WAFER MASTER CREPE HAZELNUT 65G"],[154,"8691066104959","WAFER MASTER CREPE CHOCOLATE 65G"],[155,"8691066219530","HAY HAY COCO QUATRO PACK 120G"],[156,"8691066239538","HEYO QUATRO PACK 120G"]]]];
 const ALL = DATA.flatMap(([b, its]) => its.map(([n, bc, nm, alt]) => ({n, bc, nm, b, alt})));
 const KEY = 'tili-msl-check-v1';
-let S = {}, filter = null;
-try { const d = JSON.parse(localStorage.getItem(KEY) || '{}'); S = d.s || {}; ['store','mname','mphone'].forEach(id => { if (d[id]) document.getElementById(id).value = d[id]; }); } catch (e) {}
-function save(){ try { localStorage.setItem(KEY, JSON.stringify({s:S, store:store.value, mname:mname.value, mphone:mphone.value})); } catch (e) {} }
+let S = {}, Q = {}, MODE = 'avail', filter = null;
+try { const d = JSON.parse(localStorage.getItem(KEY) || '{}'); S = d.s || {}; Q = d.q || {}; if (d.m === 'stock') MODE = 'stock'; ['store','mname','mphone'].forEach(id => { if (d[id]) document.getElementById(id).value = d[id]; }); } catch (e) {}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify({s:S, q:Q, m:MODE, store:store.value, mname:mname.value, mphone:mphone.value})); } catch (e) {} }
 document.getElementById('tot').textContent = ALL.length;
 const LBL = {ok:'✓', no:'✗', low:'LOW'};
 const list = document.getElementById('list');
+const has = n => Q[n] !== undefined && Q[n] !== '';
+const isDone = n => MODE === 'stock' ? has(n) : !!S[n];
+const rowCls = n => MODE === 'stock' ? (has(n) ? (+Q[n] > 0 ? 's-ok' : 's-no') : '') : (S[n] ? 's-' + S[n] : '');
 
 function render(){
   const q = document.getElementById('q').value.trim().toLowerCase();
   let html = '', shown = 0;
   for (const [b, its] of DATA) {
     const rows = its.filter(([n, bc, nm]) => {
-      const st = S[n];
-      if (filter === 'todo' && st) return false;
-      if (filter && filter !== 'todo' && st !== filter) return false;
+      if (MODE === 'stock') {
+        if (filter === 'todo' && has(n)) return false;
+        if (filter === 'ok' && !has(n)) return false;
+        if (filter === 'no' && !(has(n) && +Q[n] === 0)) return false;
+      } else {
+        const st = S[n];
+        if (filter === 'todo' && st) return false;
+        if (filter && filter !== 'todo' && st !== filter) return false;
+      }
       return !q || nm.toLowerCase().includes(q) || bc.includes(q);
     });
     if (!rows.length) continue;
     shown += rows.length;
-    const done = its.filter(([n]) => S[n]).length;
+    const done = its.filter(([n]) => isDone(n)).length;
     html += `<section><div class="bh"><h2>${b}</h2><small>${done}/${its.length}</small></div><ul>` +
       rows.map(([n, bc, nm]) => {
-        const st = S[n] || '';
-        return `<li class="${st ? 's-' + st : ''}" data-n="${n}"><div><div class="nm">${nm.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div><div class="bc"><em>${n}</em>${bc}</div></div>` +
-          `<div class="opts">${['ok','no','low'].map(k => `<button class="${k}" data-k="${k}" aria-pressed="${st===k}" aria-label="${{ok:'Available',no:'Not available',low:'Less stock'}[k]}">${LBL[k]}</button>`).join('')}</div></li>`;
+        const st = S[n] || '', nmE = nm.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+        const right = MODE === 'stock'
+          ? `<input class="qty" type="number" inputmode="numeric" min="0" step="1" enterkeyhint="next" data-n="${n}" value="${has(n) ? Q[n] : ''}" placeholder="Qty" aria-label="Stock for ${nmE.replace(/"/g,'')}">`
+          : null;
+        return `<li class="${rowCls(n)}" data-n="${n}"><div><div class="nm">${nmE}</div><div class="bc"><em>${n}</em>${bc}</div></div>` + (right !== null ? right + '</li>' :
+          `<div class="opts">${['ok','no','low'].map(k => `<button class="${k}" data-k="${k}" aria-pressed="${st===k}" aria-label="${{ok:'Available',no:'Not available',low:'Less stock'}[k]}">${LBL[k]}</button>`).join('')}</div></li>`);
       }).join('') + `</ul></section>`;
   }
   list.innerHTML = html || `<p class="empty">No items here.</p>`;
   tally();
 }
 function tally(){
+  if (MODE === 'stock') {
+    let cnt = 0, zero = 0, tot = 0; ALL.forEach(i => { if (has(i.n)) { cnt++; const v = +Q[i.n]; tot += v; if (v === 0) zero++; } });
+    document.getElementById('c-todo').textContent = ALL.length - cnt; document.getElementById('c-ok').textContent = cnt;
+    document.getElementById('c-no').textContent = zero; document.getElementById('c-low').textContent = tot.toLocaleString('en-US');
+    document.getElementById('b-ok').style.width = ((cnt - zero) / ALL.length * 100) + '%'; document.getElementById('b-no').style.width = (zero / ALL.length * 100) + '%'; document.getElementById('b-low').style.width = '0%';
+    return {cnt, zero, tot};
+  }
   const c = {ok:0, no:0, low:0}; ALL.forEach(i => { if (S[i.n]) c[S[i.n]]++; });
   const done = c.ok + c.no + c.low;
   document.getElementById('c-todo').textContent = ALL.length - done;
@@ -287,9 +321,35 @@ list.addEventListener('click', e => {
   li.className = S[n] ? 's-' + S[n] : '';
   li.querySelectorAll('.opts button').forEach(b => b.setAttribute('aria-pressed', S[n] === b.dataset.k));
   const sec = li.closest('section'), b = sec.querySelector('h2').textContent, its = DATA.find(d => d[0] === b)[1];
-  sec.querySelector('small').textContent = its.filter(([x]) => S[x]).length + '/' + its.length;
+  sec.querySelector('small').textContent = its.filter(([x]) => isDone(x)).length + '/' + its.length;
   tally();
 });
+list.addEventListener('input', e => {
+  const el = e.target; if (!el.classList.contains('qty')) return;
+  const n = +el.dataset.n, v = el.value.replace(/[^\d]/g, '');
+  if (v === '') delete Q[n]; else Q[n] = String(parseInt(v, 10));
+  save();
+  const li = el.closest('li'); li.className = rowCls(n);
+  const sec = li.closest('section'), b = sec.querySelector('h2').textContent, its = DATA.find(d => d[0] === b)[1];
+  sec.querySelector('small').textContent = its.filter(([x]) => isDone(x)).length + '/' + its.length;
+  tally();
+});
+list.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !e.target.classList.contains('qty')) return;
+  e.preventDefault(); const all = [...list.querySelectorAll('.qty')], i = all.indexOf(e.target);
+  if (all[i + 1]) { all[i + 1].focus(); all[i + 1].select(); } else e.target.blur();
+});
+const LABELS = {avail: ['To check','Available','Not avail.','Low'], stock: ['To count','Counted','Zero','Total pcs']};
+function setMode(m){
+  MODE = m; filter = null; save();
+  document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.m === m));
+  ['todo','ok','no','low'].forEach((k, i) => document.getElementById('l-' + k).textContent = LABELS[m][i]);
+  document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', false));
+  document.querySelector('.chip[data-f="low"]').disabled = m === 'stock';
+  document.getElementById('cf-t').textContent = m === 'stock' ? 'Clear all stock numbers?' : 'Clear all ticks?';
+  render();
+}
+document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => { if (MODE !== b.dataset.m) setMode(b.dataset.m); }));
 document.querySelectorAll('.chip').forEach(ch => ch.addEventListener('click', () => {
   filter = filter === ch.dataset.f ? null : ch.dataset.f;
   document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', x.dataset.f === filter));
@@ -299,8 +359,15 @@ document.getElementById('q').addEventListener('input', render);
 ['store','mname','mphone'].forEach(id => document.getElementById(id).addEventListener('input', save));
 
 function report(){
-  const c = tally(), todo = ALL.length - c.ok - c.no - c.low;
   const d = new Date(), ds = d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+  if (MODE === 'stock') {
+    const k = tally(), todo = ALL.length - k.cnt; let out = '', lb = '';
+    ALL.filter(i => has(i.n)).forEach(i => { if (i.b !== lb) { out += `_${i.b}_\n`; lb = i.b; } out += `• ${i.nm} — ${i.bc}: *${Q[i.n]}*\n`; });
+    const t = `*STOCK REPORT — Tili Star Trading*\nStore: ${store.value || '-'}\nMerchandiser: ${mname.value || '-'}\nPhone: ${mphone.value || '-'}\nDate: ${ds}\n\n` +
+      `Items counted: ${k.cnt}/${ALL.length}\nTotal pieces: ${k.tot}\nZero stock: ${k.zero}\nNot counted: ${todo}\n` + (out ? `\n*STOCK BY ITEM (pcs)*\n` + out : '');
+    return {t, todo};
+  }
+  const c = tally(), todo = ALL.length - c.ok - c.no - c.low;
   const sec = (k, title) => { const its = ALL.filter(i => S[i.n] === k); if (!its.length) return ''; let out = `\n*${title} (${its.length})*\n`, lb = '';
     its.forEach(i => { if (i.b !== lb) { out += `_${i.b}_\n`; lb = i.b; } out += `• ${i.nm} — ${i.bc}\n`; }); return out; };
   let t = `*STORE STOCK CHECK — Tili Star Trading*\nStore: ${store.value || '-'}\nMerchandiser: ${mname.value || '-'}\nPhone: ${mphone.value || '-'}\nDate: ${ds}\n\n` +
@@ -313,7 +380,8 @@ document.getElementById('send').addEventListener('click', () => {
   document.getElementById('report').textContent = t;
   const w = document.getElementById('sh-warn'), miss = [];
   if (!store.value.trim()) miss.push('store name'); if (!mname.value.trim()) miss.push('your name');
-  const msgs = []; if (miss.length) msgs.push('Add ' + miss.join(' and ') + ' at the top.'); if (todo) msgs.push(todo + ' items not checked yet.');
+  const msgs = []; if (miss.length) msgs.push('Add ' + miss.join(' and ') + ' at the top.'); if (todo) msgs.push(todo + (MODE === 'stock' ? ' items not counted yet.' : ' items not checked yet.'));
+  document.getElementById('sh-title').textContent = MODE === 'stock' ? 'Stock report' : 'Availability report';
   w.textContent = msgs.join(' '); w.hidden = !msgs.length;
   document.getElementById('wa').href = 'https://wa.me/?text=' + encodeURIComponent(t);
   sheet.hidden = false;
@@ -328,10 +396,10 @@ document.getElementById('copy').addEventListener('click', e => {
 const conf = document.getElementById('confirm');
 document.getElementById('reset').addEventListener('click', () => conf.hidden = false);
 document.getElementById('cancel').addEventListener('click', () => conf.hidden = true);
-document.getElementById('doclear').addEventListener('click', () => { S = {}; save(); conf.hidden = true; filter = null; document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', false)); render(); });
+document.getElementById('doclear').addEventListener('click', () => { if (MODE === 'stock') Q = {}; else S = {}; save(); conf.hidden = true; filter = null; document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', false)); render(); });
 [sheet, conf, document.getElementById("found")].forEach(s => s.addEventListener('click', e => { if (e.target === s) s.hidden = true; }));
 const store = document.getElementById('store'), mname = document.getElementById('mname'), mphone = document.getElementById('mphone');
-render();
+setMode(MODE);
 
 /* ---------- barcode scanning ---------- */
 const norm = v => String(v || '').replace(/\D/g, '').replace(/^0+/, '');
@@ -436,10 +504,12 @@ function showFound(item, code){
   const hitEl = document.getElementById('hit'), big = document.getElementById('bigbtns');
   if (item) {
     hitEl.innerHTML = `<div class="hit"><span class="b">${esc(item.b)} · #${item.n}</span><span class="n">${esc(item.nm)}</span><span class="c">${item.bc}</span></div>`;
-    big.hidden = false; document.getElementById('showit').hidden = false; syncBig();
+    const qf = document.getElementById('qtyform');
+    big.hidden = MODE === 'stock'; qf.hidden = MODE !== 'stock'; document.getElementById('showit').hidden = false; syncBig();
+    if (MODE === 'stock') { const fi = document.getElementById('fqty'); fi.value = has(item.n) ? Q[item.n] : ''; setTimeout(() => { fi.focus(); fi.select(); }, 60); }
   } else {
     hitEl.innerHTML = `<div class="hit miss"><span class="b">Not in MSL list</span><span class="n">No item with this barcode</span><span class="c">${esc(code)}</span></div>`;
-    big.hidden = true; document.getElementById('showit').hidden = true;
+    big.hidden = true; document.getElementById('qtyform').hidden = true; document.getElementById('showit').hidden = true;
   }
   foundS.hidden = false;
 }
@@ -449,12 +519,19 @@ document.getElementById('bigbtns').addEventListener('click', e => {
   if (S[cur.n] === b.dataset.k) delete S[cur.n]; else S[cur.n] = b.dataset.k;
   save(); syncBig(); render();
 });
+document.getElementById('qtyform').addEventListener('submit', e => {
+  e.preventDefault(); if (!cur) return;
+  const v = document.getElementById('fqty').value.replace(/[^\d]/g, '');
+  if (v === '') delete Q[cur.n]; else Q[cur.n] = String(parseInt(v, 10));
+  save(); render(); document.getElementById('fqty').blur(); foundS.hidden = true; openScan();
+});
 function renderLog(){
   const el = document.getElementById('log');
   if (!LOG.length) { el.innerHTML = ''; return; }
   el.innerHTML = '<h4>Recent scans</h4>' + LOG.map((x, i) => {
-    const it = x.n ? ALL.find(a => a.n === x.n) : null, st = it ? S[it.n] : null;
-    return `<button data-i="${i}"><span>${it ? esc(it.nm) : 'Not in list · ' + esc(x.code)}</span><span class="tag ${st || ''}">${st ? LBL[st] : (it ? '–' : '?')}</span></button>`;
+    const it = x.n ? ALL.find(a => a.n === x.n) : null, st = it && MODE !== 'stock' ? S[it.n] : null;
+    const tg = MODE === 'stock' ? (it ? (has(it.n) ? Q[it.n] : '–') : '?') : (st ? LBL[st] : (it ? '–' : '?'));
+    return `<button data-i="${i}"><span>${it ? esc(it.nm) : 'Not in list · ' + esc(x.code)}</span><span class="tag ${st || ''}">${tg}</span></button>`;
   }).join('');
 }
 document.getElementById('log').addEventListener('click', e => {

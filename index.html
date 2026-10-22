@@ -90,6 +90,10 @@ button:focus-visible,.chip:focus-visible{outline:2px solid var(--gold);outline-o
 .txt[open]{display:grid;gap:8px}
 .row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:6px}
 .row3 .btn{font-size:13px;padding:10px 6px}
+.req{color:var(--no);font-size:14px;margin-left:1px}
+.info input.bad{border-color:var(--no);box-shadow:0 0 0 1px var(--no)}
+.err-msg{color:var(--no);font-size:12.5px;font-weight:600;letter-spacing:0;text-transform:none}
+@media (prefers-reduced-motion:no-preference){.info input.bad{animation:shake .3s}@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}}
 .warn{color:var(--no);font-size:13px;font-weight:600}
 @media (prefers-reduced-motion:no-preference){li{transition:background .15s}}
 .foot .wrap{grid-template-columns:auto auto minmax(0,1fr)}
@@ -190,7 +194,7 @@ li.s-ok .qty{border-color:var(--ok)} li.s-no .qty{border-color:var(--no)}
 <header><div class="wrap"><h1>STORE STOCK CHECK</h1><div class="co">Tili Star Trading L.L.C<br>MSL · <span id="tot"></span> SKUs</div></div></header>
 
 <div class="wrap info">
-  <label for="store">Store name<input id="store" autocomplete="off" placeholder="e.g. Carrefour Al Zahia"></label>
+  <label for="store"><span>Store name <span class="req" aria-hidden="true">*</span></span><input id="store" autocomplete="off" required aria-required="true" placeholder="e.g. Carrefour Al Zahia"><span class="err-msg" id="store-err" hidden>Store name is required</span></label>
   <div class="two">
     <label for="mname">Merchandiser<input id="mname" autocomplete="name" placeholder="Your name"></label>
     <label for="mphone">Phone<input id="mphone" type="tel" autocomplete="tel" placeholder="05X XXX XXXX"></label>
@@ -379,6 +383,7 @@ document.querySelectorAll('.chip').forEach(ch => ch.addEventListener('click', ()
 }));
 document.getElementById('q').addEventListener('input', render);
 ['store','mname','mphone'].forEach(id => document.getElementById(id).addEventListener('input', save));
+document.getElementById('store').addEventListener('input', e => { if (e.target.value.trim()) { e.target.classList.remove('bad'); document.getElementById('store-err').hidden = true; } });
 
 function report(){
   const d = new Date(), ds = d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
@@ -491,10 +496,15 @@ document.getElementById('savepdf').addEventListener('click', () => {
   try { savePdf(buildPdf(), pdfName()); } catch (e) { pnote(e.message === 'nolib' ? 'PDF needs internet. Connect and reload the page.' : 'Could not make the PDF.'); }
 });
 document.getElementById('send').addEventListener('click', () => {
+  if (!store.value.trim()) {
+    store.classList.add('bad'); document.getElementById('store-err').hidden = false;
+    store.scrollIntoView({block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+    setTimeout(() => store.focus(), 250); return;
+  }
   const {t, todo} = report();
   document.getElementById('report').textContent = t;
   const w = document.getElementById('sh-warn'), miss = [];
-  if (!store.value.trim()) miss.push('store name'); if (!mname.value.trim()) miss.push('your name');
+  if (!mname.value.trim()) miss.push('your name');
   const msgs = []; if (miss.length) msgs.push('Add ' + miss.join(' and ') + ' at the top.'); if (todo) msgs.push(todo + (MODE === 'stock' ? ' items not counted yet.' : ' items not checked yet.'));
   document.getElementById('sh-title').textContent = MODE === 'stock' ? 'Stock report' : 'Availability report';
   w.textContent = msgs.join(' '); w.hidden = !msgs.length;

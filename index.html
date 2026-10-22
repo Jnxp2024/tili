@@ -77,6 +77,19 @@ button:focus-visible,.chip:focus-visible{outline:2px solid var(--gold);outline-o
 .sheet pre{white-space:pre-wrap;font-family:var(--body);font-size:13px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;margin:0;max-height:40vh;overflow:auto;user-select:all}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .note{font-size:12.5px;color:var(--muted)}
+.sumgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.sumgrid div{border:1px solid var(--line);border-radius:8px;padding:8px 4px;text-align:center;display:grid;gap:2px;background:var(--bg)}
+.sumgrid b{font-family:var(--display);font-size:22px;line-height:1;font-variant-numeric:tabular-nums}
+.sumgrid span{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.sharebtn{display:flex;align-items:center;justify-content:center;gap:8px;font-size:16px;padding:14px}
+.sharebtn svg{width:20px;height:20px}
+.apps{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:-2px}
+.app{font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;color:#fff}
+.app.wa{background:#1FA855}.app.tg{background:#2AABEE}
+.txt summary{cursor:pointer;font-size:13.5px;font-weight:600;color:var(--muted);padding:4px 0}
+.txt[open]{display:grid;gap:8px}
+.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:6px}
+.row3 .btn{font-size:13px;padding:10px 6px}
 .warn{color:var(--no);font-size:13px;font-weight:600}
 @media (prefers-reduced-motion:no-preference){li{transition:background .15s}}
 .foot .wrap{grid-template-columns:auto auto minmax(0,1fr)}
@@ -207,12 +220,19 @@ li.s-ok .qty{border-color:var(--ok)} li.s-no .qty{border-color:var(--no)}
 <div class="sheet" id="sheet" hidden><div>
   <h3 id="sh-title">Report</h3>
   <p class="warn" id="sh-warn" hidden></p>
-  <pre id="report"></pre>
-  <div class="row">
-    <a class="btn main" id="wa" href="#" target="_blank" rel="noopener">WhatsApp</a>
-    <button class="btn" id="copy">Copy text</button>
-  </div>
-  <p class="note">If WhatsApp doesn't open, tap Copy text and paste it into the chat.</p>
+  <div class="sumgrid" id="sumgrid"></div>
+  <button class="btn main sharebtn" id="sharepdf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg>Share PDF report</button>
+  <div class="apps"><span class="app wa">WhatsApp</span><span class="app tg">Telegram</span><span class="note">pick one from the share menu</span></div>
+  <button class="btn" id="savepdf">Save PDF to phone</button>
+  <p class="note" id="pdfnote" aria-live="polite"></p>
+  <details class="txt"><summary>Send as text instead</summary>
+    <div class="row3">
+      <a class="btn" id="wa" href="#" target="_blank" rel="noopener">WhatsApp text</a>
+      <a class="btn" id="tg" href="#" target="_blank" rel="noopener">Telegram text</a>
+      <button class="btn" id="copy">Copy text</button>
+    </div>
+    <pre id="report"></pre>
+  </details>
   <button class="btn" id="close">Back to list</button>
 </div></div>
 
@@ -252,6 +272,8 @@ li.s-ok .qty{border-color:var(--ok)} li.s-no .qty{border-color:var(--no)}
 </div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
 <script>
 const DATA = [["KÜCHE",[[1,"6224000045562","FLAMINGO MEXICAN BLZN HOT PUFFS 50G"],[2,"6224000045579","FLAMINGO CHILI & LEMON PUFFS 50G"],[3,"6224000045555","FLAMINGO SMOKED CHEESE PUFFS 50G"],[4,"6224000045067","FLAMINGO SWEET CHILI PUFFS 50G"],[5,"6224000045074","FLAMINGO ZESTY TOMATO PUFFS 50G"],[6,"6224000045050","FLAMINGO SEASONED CHEESE PUFFS 50G"],[7,"850079217003","SUNFLOWER SEEDS 35G"],[8,"850079217034","SUNFLOWER KERNELS 55G"],[9,"850079217058","REDSKIN PEANUTS 55G"],[10,"6296536403048","ROASTED SUNFLOWER SEEDS 125G"],[11,"850079217027","SUNFLOWER SEEDS 100G"],[12,"850079217041","SUNFLOWER KERNELS 125G"],[13,"850079217065","REDSKIN PEANUTS 125G"],[14,"6265663102339","LINA PIPE CHEESE PUFFS 20G"],[15,"6297675943013","DATES CHOCOLATE ASSORTED 250G"],[16,"6297675943167","REVE PISTACHIO WAFER ROLL 80G"],[17,"6297675943174","REVE ALMOND WAFER ROLL 80G"],[18,"6297675943402","SUNFLOWER SEEDS LEMON 120G"],[19,"6297675943440","MIX CORNS SALT/CHLI/CHESE 80G"],[20,"6297675943464","MIX NUTS CLASSIC RAW 80G"],[21,"6297675943426","MIX SEEDS PUMPKIN/SQUASH 80G"],[22,"6297675943488","JAPANESE RICE CRACKERS 70G"],[23,"6297675943501","PEANUTS IN SHELL 70G"],[24,"6297675943389","MIX PEANUTS BBQ/PLAIN/CTD 80G"],[25,"8908021078218","FIERY & CRUNCHY BALLS 60G"],[26,"8908021078096","CHEESE BALLS 60G"],[27,"6287014281128","KOREAN FLAVOUR 70G"],[28,"6287014280459","SWEET & SOUR 70G"],[29,"6287014280251","CHILI PEPPER & LEMON 70G"],[30,"6287014281302","HOT SAUCE FLAVOUR70G"],[31,"6297675943020","DATES CHOCOLATE MILK 250G"],[32,"6297675943037","DATES CHOCOLATE DARK 250G"],[33,"6297675943044","DATES CHOCOLATE COCONUT 250G"],[34,"6296536403086","DUBAI CHOCOLATE DARK 150G"],[35,"6296536403062","DUBAI CHOCOLATE MILK 150G"],[36,"6296536403093","DUBAI CHOCOLATE DARK 50G"],[37,"6296536403079","DUBAI CHOCOLATE MILK 50G"],[38,"6925374537232","PANDA POPZ 40G"],[39,"6296536403055","ROASTED SUNFLOWER SEEDS 55G"],[40,"6297675943556","DATECHOCOLATE KUNAFA MILK 80G"],[41,"6297675943570","DATECHOCOLATE KUNAFA DARK 80G"],[42,"6297675944492","DUBAI CHOCOLATE MILK 80G"],[43,"6297675944508","DUBAI CHOCOLATE DARK 80G"],[44,"6297675944478","DUBAI CHOCOLATE CAMEL MILK80G"],[45,"6297675944485","DUBAI CHOCOLT CAML MLK DRK80G"],[46,"6297675944638","DUBAI DARK CHOC NAS 80G"],[47,"6297675944614","DUBAI CHOC MLK NAS 80G"],[48,"6297675944676","DUBAI CHOC CML MLK NAS 80G"],[49,"6297675944652","DUBAI CHOC CML MLK NAS DRK80G"],[50,"6925374541154","PANDAPOPZ BIS STK CHOC DIP40G"],[51,"6925374541123","PANDAPOPZ CK STK CRM 40G"],[52,"6925374541147","PANDAPOPZ CARAM DIP 40G"],[53,"6925374541130","PANDAPOPZ CHOCO CRUNCH CON20G"],[54,"6297675943914","DUBAI CHOCOLATE SAFR DARK150G"],[55,"6297675943891","DUBAI CHOCOLATE SAFR MILK150G"],[56,"6297675944010","DUBAI CHOCODATE DARK150G"],[57,"6297675944027","DUBAI CHOCODATE MILK150G"],[58,"6297675944133","DUBAI CHOCOLATE AH DARK150G"],[59,"6297675944140","DUBAI CHOCOLATE AH MILK150G"],[60,"6297675943969","DUBAI CHOCOLATE SAFR DARK 50G"],[61,"6297675943952","DUBAI CHOCOLATE SAFR MILK 50G"],[62,"6297675944072","DUBAI CHOCODATE DARK 50G"],[63,"6297675944089","DUBAI CHOCODATE MILK 50G"],[64,"6297675944195","DUBAI CHOCOLATE AH DARK50G"],[65,"6297675944201","DUBAI CHOCOLATE AH MILK50G"],[66,"6297675943365","CHOCOREVAE WAFER HAZELNUT140G"],[67,"6297675943372","CHOCOREVAE WAFER COCONUT 140G"]]],["TAKIS",[[68,"757528050573","FUEGO BLUE HEATS 56G"],[69,"757528005276","FUEGO 56G"],[70,"757528008796","FUEGO 113G"],[71,"757528047528","FUEGO BLUE HEATS 113G"],[72,"7500810001592","FEGUO WAVES 70G"],[73,"757528008802","NITRO 113G"],[74,"757528005047","FUEGO 28G"],[75,"757528050580","FUEGO BLUE HEATS 200G"],[76,"757528010607","FUEGO CHURRITOS 113G"],[77,"757528050597","FUEGO 200G"],[78,"757528050177","FUEGO BLUE HEATS WAVES 70G"],[79,"757528046361","KETTLEZ 71G"],[80,"7500810001608","FEGUO WAVES 226G"],[81,"757528046682","FUEGO CRISPS 155G"],[82,"757528051945","BLUE HEATS CRISPS 155G"]]],["ALIEN'S SOUR",[[83,"6971635578827","JELLY STICK STW 96G"],[84,"6971635578834","JELLY STICK BLUBRY 96G"],[85,"6971635579343","LOLLIPOP 210G"],[86,"6971635578995","POPPING CANDY BRIES21G"],[87,"6971635579008","POPPING CANDY MIX 21G"],[88,"6971635579930","GUMIES WITH PEN STW55G"],[89,"6971635579589","GUMIES WITH PEN BLB55G"],[90,"6971635579619","TRI BLAST GEL 60G"],[91,"6971635580073","GUMBALL DISPENSER 40G"],[92,"6971635580004","GUMMY PIZZA&HOTDOG 10G"],[93,"6971635580103","GUMMY COLA & FRIES 10G"],[94,"6971635580776","SPACE GUMMY STW 100G"],[95,"6971635580769","SPACE GUMMY BLBR 100G"],[96,"6971635580899","GUMMY ROCKS STW 65G"],[97,"6971635580882","GUMMY ROCKS BLBR 65G"],[98,"6971635580868","STRAWS STW 55G"],[99,"6971635580028","TEETH CANDY STW 15G"],[100,"6971635580110","TEETH CANDY BLBR 15G"],[101,"6971635580875","STRAWS BLBR 55G"],[102,"6297675945383","ALIEN’S SOUR ROLLED SOUR TORTILLA CHIPS BRILLIANT BLUE FLAVOUR 40G"],[103,"6297675945376","ALIEN’S SOUR ROLLED SOUR TORTILLA CHIPS CHILLI & LEMON FLAVOR 40G"]]],["WARHEADS",[[104,"8435124856394","SUPER SOUR TRILO GEL 51G"],[105,"8435124857711","MINI BITE 80G"],[106,"8435124857186","BITES GUMMY 80G"],[107,"8435124856301","TWIST AND SHAKE 18G"],[108,"8435124857216","TONGUE SPLASH 40G"],[109,"8435124856363","SUPER SOUR GEL 20G"],[110,"8435124856332","THUMB DIPPERS 40G"]]],["HELLO KITTY",[[111,"6970642471138","LIPSTICK 6G"],[112,"840200004220","GUMBALL DISPENSER 20G"],[113,"6970642471145","WRIST BAND 8G"],[114,"6970642471152","CANDY LIP GLOSS 10G"],[115,"6970642471213","COIN BANK 30G"],[116,"9555030107010","MEGA LOLLIPOPS 135G"],[117,"9555030107287","PARTY PACK 90G"]]],["PEPPERMINT",[[118,"6921522307184","PAPERMINT FEEL COOL STAWBERRY 200MM"],[119,"6921522307191","PAPERMINT FEEL COOL MINT 200MM"],[120,"5425010096396","PAPERMINT COOL CAPS STAWBERRY 48G"],[121,"5425010092251","PAPERMINT COOL CAPS 48G"],[122,"5425010096013","PAPERMINT LEAVES 20G","5425010090226"]]],["CHARACTERS",[[123,"9001643217313","BARBIE FLASHING BAG 31G"],[124,"4004641217038","BARBIE BEAUTY CANDY 40G"],[125,"4004641221493","BARBIE MAKEUP KIT CANDIES 30G"],[126,"4004641217168","BARBIE SKATEBOARD CANDIES 12G"],[127,"4004641216703","BARBIE EGGS CANDIES 10G"],[128,"4004641216987","BARBIE SCOOTER 12G"],[129,"4004641216932","BARBIE CAMERA 12G"],[130,"4004641217151","BARBIE PRESSER BUTTON AIRPLANE 15G"]]],["MIOO",[[131,"6297675944515","DUBAI CHOCOLATE 200G"],[132,"6297675944737","WAFER ROLLS PISTACHIO 140G"],[133,"6297675944713","WAFER ROLLS ALMOND 140"],[134,"6914204005522","DUCK LIP POP 15G"],[135,"9814188000000","JELLY PICK & MIX 1KG"]]],["TAJIN",[[136,"633148100556","CLASICO SEASONING 400G"],[137,"633148100013","CLASICO SEASONING 142G"],[138,"633148104547","HABANERO SEASONING 45G"]]],["DECORIA",[[139,"8809102890265","MIOO ROSE JELLY LOLLIPOP 40G"],[140,"8809102890937","MIOO HEART JELLY LOLLIPOP 37G"],[141,"8809102890029","MIOO JELOMI JELLY LOLLIPOP 37G"]]],["BAIDA",[[142,"6952581460817","CANDY+LOLYPOP 18G"]]],["KITCHORA",[[143,"6297675943518","HOT SAUCE 88ML"],[144,"6297675943525","ORIG TOMATO KETCHUP340G"],[145,"6297675943532","HOT TOMATO KETCHUP 340G"],[146,"6297675943549","BBQ SAUCE 340G"]]],["TIME",[[147,"8691066111643","WAFER MASTER ROLLS HAZELNUT 120G"],[148,"8691066151625","WAFER MASTER ROLLS CHOCOLATE 120G"],[149,"8691066141027","WAFER MASTER MINIS HAZELNUT 120G"],[150,"8691066122526","WAFER MASTER MINIS CHOCOLATE 120G"],[151,"8691066180052","WAFER MASTER ROLLS HAZELNUT 65G"],[152,"8691066186054","WAFER MASTER ROLLS CHOCOLATE 65G"],[153,"8691066104553","WAFER MASTER CREPE HAZELNUT 65G"],[154,"8691066104959","WAFER MASTER CREPE CHOCOLATE 65G"],[155,"8691066219530","HAY HAY COCO QUATRO PACK 120G"],[156,"8691066239538","HEYO QUATRO PACK 120G"]]]];
 const ALL = DATA.flatMap(([b, its]) => its.map(([n, bc, nm, alt]) => ({n, bc, nm, b, alt})));
@@ -375,6 +397,99 @@ function report(){
   return {t, todo};
 }
 const sheet = document.getElementById('sheet');
+const CSS = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function summary(){
+  if (MODE === 'stock') { const k = tally(); return [[k.cnt, 'Counted', CSS('--ok')], [k.tot.toLocaleString('en-US'), 'Total pcs', CSS('--fg')], [k.zero, 'Zero', CSS('--no')], [ALL.length - k.cnt, 'Not counted', CSS('--muted')]]; }
+  const c = tally(); return [[c.ok, 'Available', CSS('--ok')], [c.no, 'Not avail.', CSS('--no')], [c.low, 'Low', CSS('--low')], [ALL.length - c.ok - c.no - c.low, 'Not checked', CSS('--muted')]];
+}
+/* ---------- PDF report ---------- */
+let DL = null;
+try { if (window.claude && window.claude.use) window.claude.use('downloads').then(d => { DL = d; }, () => {}); } catch (e) {}
+function pdfName(){
+  const d = new Date(), ds = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const st = (store.value.trim() || 'Store').replace(/[^\w\- ]+/g, '').replace(/\s+/g, '_').slice(0, 40);
+  return (MODE === 'stock' ? 'Stock_Report_' : 'Availability_Report_') + st + '_' + ds + '.pdf';
+}
+function buildPdf(){
+  const J = window.jspdf; if (!J || !J.jsPDF) throw new Error('nolib');
+  const doc = new J.jsPDF({unit: 'mm', format: 'a4'}), PW = 210, M = 12;
+  const NAVY = [31, 42, 68], GOLD = [192, 149, 31], OK = [46, 125, 50], NO = [198, 40, 40], LOW = [199, 122, 0], MUT = [110, 118, 135];
+  const d = new Date(), ds = d.toLocaleDateString('en-GB') + '  ' + d.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
+  const stock = MODE === 'stock';
+  doc.setFillColor(...NAVY); doc.rect(0, 0, PW, 24, 'F'); doc.setFillColor(...GOLD); doc.rect(0, 24, PW, 1, 'F');
+  doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(17); doc.text(stock ? 'STOCK REPORT' : 'AVAILABILITY REPORT', M, 13);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.text('MSL store check  |  ' + ALL.length + ' active SKUs', M, 19);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('TILI STAR TRADING L.L.C', PW - M, 12, {align: 'right'});
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(174, 182, 206); doc.text(ds, PW - M, 18, {align: 'right'});
+  const info = [['Store', store.value.trim() || '-'], ['Merchandiser', mname.value.trim() || '-'], ['Phone', mphone.value.trim() || '-'], ['Date', ds]];
+  let y = 34;
+  info.forEach(([k, v], i) => { const x = M + (i % 2) * 96, yy = y + Math.floor(i / 2) * 8;
+    doc.setTextColor(...MUT); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.text(k.toUpperCase(), x, yy);
+    doc.setTextColor(20, 26, 40); doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.text(String(v).slice(0, 48), x + 26, yy); });
+  y = 50;
+  const sm = stock ? (() => { const k = tally(); return [[k.cnt, 'COUNTED', OK], [k.tot.toLocaleString('en-US'), 'TOTAL PCS', NAVY], [k.zero, 'ZERO STOCK', NO], [ALL.length - k.cnt, 'NOT COUNTED', MUT]]; })()
+                   : (() => { const c = tally(); return [[c.ok, 'AVAILABLE', OK], [c.no, 'NOT AVAILABLE', NO], [c.low, 'LESS STOCK', LOW], [ALL.length - c.ok - c.no - c.low, 'NOT CHECKED', MUT]]; })();
+  const bw = (PW - 2 * M - 9) / 4;
+  sm.forEach(([v, l, col], i) => { const x = M + i * (bw + 3);
+    doc.setDrawColor(210, 215, 224); doc.setFillColor(247, 248, 251); doc.roundedRect(x, y, bw, 18, 2, 2, 'FD');
+    doc.setFillColor(...col); doc.rect(x, y + 2, 1.2, 14, 'F');
+    doc.setTextColor(...col); doc.setFont('helvetica', 'bold'); doc.setFontSize(17); doc.text(String(v), x + bw / 2, y + 10, {align: 'center'});
+    doc.setTextColor(...MUT); doc.setFontSize(7); doc.text(l, x + bw / 2, y + 15, {align: 'center'}); });
+  y += 26;
+  const head = {fillColor: NAVY, textColor: 255, fontStyle: 'bold', fontSize: 7.5, halign: 'center'};
+  const base = {fontSize: 7.6, cellPadding: 1.4, lineColor: [210, 215, 224], lineWidth: 0.15, textColor: [25, 30, 45], valign: 'middle'};
+  const section = (title, col, rows, cols, extra) => {
+    if (y > 260) { doc.addPage(); y = 16; }
+    doc.setTextColor(...col); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.text(title, M, y); y += 2;
+    doc.autoTable(Object.assign({startY: y, head: [cols], body: rows, margin: {left: M, right: M, top: 14}, theme: 'grid', headStyles: head, styles: base,
+      alternateRowStyles: {fillColor: [247, 248, 251]},
+      columnStyles: {0: {halign: 'center', cellWidth: 9, textColor: MUT}, 1: {halign: 'center', cellWidth: 27}, 2: {cellWidth: 26, fontStyle: 'bold', fontSize: 7}}}, extra || {}));
+    y = doc.lastAutoTable.finalY + 8;
+  };
+  const row = i => [i.n, i.bc, i.b, i.nm];
+  if (stock) {
+    const zero = ALL.filter(i => has(i.n) && +Q[i.n] === 0);
+    if (zero.length) section('ZERO STOCK (' + zero.length + ')', NO, zero.map(row), ['#', 'BARCODE', 'BRAND', 'ITEM']);
+    section('STOCK BY ITEM', NAVY, ALL.map(i => row(i).concat(has(i.n) ? String(Q[i.n]) : '-')), ['#', 'BARCODE', 'BRAND', 'ITEM', 'QTY (PCS)'], {
+      columnStyles: {0: {halign: 'center', cellWidth: 9, textColor: MUT}, 1: {halign: 'center', cellWidth: 27}, 2: {cellWidth: 26, fontStyle: 'bold', fontSize: 7}, 4: {halign: 'center', cellWidth: 22, fontStyle: 'bold', fontSize: 9}},
+      didParseCell: h => { if (h.section === 'body' && h.column.index === 4) { const v = h.cell.raw; if (v === '-') h.cell.styles.textColor = MUT; else if (+v === 0) { h.cell.styles.textColor = 255; h.cell.styles.fillColor = NO; } else h.cell.styles.textColor = OK; } }});
+  } else {
+    const no = ALL.filter(i => S[i.n] === 'no'), lo = ALL.filter(i => S[i.n] === 'low');
+    if (no.length) section('NOT AVAILABLE (' + no.length + ')', NO, no.map(row), ['#', 'BARCODE', 'BRAND', 'ITEM']);
+    if (lo.length) section('LESS STOCK (' + lo.length + ')', LOW, lo.map(row), ['#', 'BARCODE', 'BRAND', 'ITEM']);
+    const LB = {ok: 'AVAILABLE', no: 'NOT AVAILABLE', low: 'LESS STOCK'};
+    section('FULL LIST', NAVY, ALL.map(i => row(i).concat(S[i.n] ? LB[S[i.n]] : 'NOT CHECKED')), ['#', 'BARCODE', 'BRAND', 'ITEM', 'STATUS'], {
+      columnStyles: {0: {halign: 'center', cellWidth: 9, textColor: MUT}, 1: {halign: 'center', cellWidth: 27}, 2: {cellWidth: 26, fontStyle: 'bold', fontSize: 7}, 4: {halign: 'center', cellWidth: 28, fontStyle: 'bold', fontSize: 7}},
+      didParseCell: h => { if (h.section === 'body' && h.column.index === 4) { const c = {AVAILABLE: OK, 'NOT AVAILABLE': NO, 'LESS STOCK': LOW}[h.cell.raw]; if (c) { h.cell.styles.fillColor = c; h.cell.styles.textColor = 255; } else h.cell.styles.textColor = MUT; } }});
+  }
+  const n = doc.getNumberOfPages();
+  for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(...MUT);
+    doc.text('Tili Star Trading L.L.C  |  ' + (store.value.trim() || 'Store') + '  |  ' + (mname.value.trim() || '-'), M, 290); doc.text('Page ' + i + ' of ' + n, PW - M, 290, {align: 'right'}); }
+  return doc.output('blob');
+}
+const pnote = t => { document.getElementById('pdfnote').textContent = t; };
+async function savePdf(blob, name){
+  if (DL) { try { await DL.save({filename: name, data: blob}); pnote('PDF saved. Open WhatsApp or Telegram and attach it from your files.'); return; } catch (e) { if (e && e.code === 'declined') { pnote('Not saved.'); return; } } }
+  try { const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000);
+    pnote('PDF downloaded. Open WhatsApp or Telegram and attach it from your files.'); } catch (e) { pnote('Could not save the PDF here. Use "Send as text instead".'); }
+}
+document.getElementById('sharepdf').addEventListener('click', async () => {
+  let blob, name = pdfName();
+  try { blob = buildPdf(); } catch (e) { pnote(e.message === 'nolib' ? 'PDF needs internet. Connect and reload the page, or send as text.' : 'Could not make the PDF. Send as text instead.'); return; }
+  const file = new File([blob], name, {type: 'application/pdf'});
+  if (navigator.canShare && navigator.share) {
+    let ok = false; try { ok = navigator.canShare({files: [file]}); } catch (e) {}
+    if (ok) {
+      try { await navigator.share({files: [file], title: name}); pnote('Shared.'); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+  }
+  pnote('Sharing files is not supported here, so the PDF will be saved instead.');
+  savePdf(blob, name);
+});
+document.getElementById('savepdf').addEventListener('click', () => {
+  try { savePdf(buildPdf(), pdfName()); } catch (e) { pnote(e.message === 'nolib' ? 'PDF needs internet. Connect and reload the page.' : 'Could not make the PDF.'); }
+});
 document.getElementById('send').addEventListener('click', () => {
   const {t, todo} = report();
   document.getElementById('report').textContent = t;
@@ -384,6 +499,10 @@ document.getElementById('send').addEventListener('click', () => {
   document.getElementById('sh-title').textContent = MODE === 'stock' ? 'Stock report' : 'Availability report';
   w.textContent = msgs.join(' '); w.hidden = !msgs.length;
   document.getElementById('wa').href = 'https://wa.me/?text=' + encodeURIComponent(t);
+  document.getElementById('tg').href = 'https://t.me/share/url?url=' + encodeURIComponent(t);
+  document.getElementById('pdfnote').textContent = '';
+  const sm = summary();
+  document.getElementById('sumgrid').innerHTML = sm.map(([v, l, c]) => `<div><b style="color:${c}">${v}</b><span>${l}</span></div>`).join('');
   sheet.hidden = false;
 });
 document.getElementById('close').addEventListener('click', () => sheet.hidden = true);

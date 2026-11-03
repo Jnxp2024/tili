@@ -131,7 +131,7 @@ button:focus-visible,.chip:focus-visible{outline:2px solid var(--gold);outline-o
 li.flash{outline:3px solid var(--gold);outline-offset:-3px}
 @media (max-width:370px){.btn.scanb span{display:none}}
 .chips{max-width:640px}
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px;background:var(--card);border:1px solid var(--line);border-radius:10px;grid-column:1/-1}
+.tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:3px;padding:3px;background:var(--card);border:1px solid var(--line);border-radius:10px;grid-column:1/-1}
 .tabs button{font:inherit;font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.03em;border:0;border-radius:8px;padding:9px 6px;background:transparent;color:var(--muted);cursor:pointer}
 .tabs button[aria-selected="true"]{background:var(--navy);color:var(--navy-fg)}
 .qty{width:96px;font:inherit;font-size:17px;font-weight:600;text-align:center;padding:8px 6px;border:1.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);font-variant-numeric:tabular-nums;-moz-appearance:textfield;appearance:textfield}
@@ -157,6 +157,7 @@ li.s-ok .qty{border-color:var(--ok)} li.s-no .qty{border-color:var(--no)}
 }
 /* tablets and iPad: wider form, items flow in columns */
 @media (min-width:760px){
+  .tabs{grid-template-columns:repeat(4,1fr)}
   .info{grid-template-columns:2fr 1.4fr 1fr}
   .info .two{display:contents}
   .tally .wrap{grid-template-columns:auto minmax(220px,1fr);align-items:center;gap:14px}
@@ -202,7 +203,7 @@ li.s-ok .qty{border-color:var(--ok)} li.s-no .qty{border-color:var(--no)}
 </div>
 
 <div class="tally"><div class="wrap">
-  <div class="tabs" role="tablist" aria-label="Report type"><button role="tab" id="t-avail" data-m="avail" aria-selected="true">Availability</button><button role="tab" id="t-stock" data-m="stock" aria-selected="false">Stock report</button><button role="tab" id="t-new" data-m="new" aria-selected="false">New items</button></div>
+  <div class="tabs" role="tablist" aria-label="Report type"><button role="tab" id="t-avail" data-m="avail" aria-selected="true">Availability</button><button role="tab" id="t-stock" data-m="stock" aria-selected="false">Stock report</button><button role="tab" id="t-new" data-m="new" aria-selected="false">New items</button><button role="tab" id="t-order" data-m="order" aria-selected="false">Order</button></div>
   <div class="chips" role="group" aria-label="Filter by status">
     <button class="chip" data-f="todo" aria-pressed="false"><b id="c-todo">0</b><span id="l-todo">To check</span></button>
     <button class="chip ok" data-f="ok" aria-pressed="false"><b id="c-ok">0</b><span id="l-ok">Available</span></button>
@@ -261,7 +262,7 @@ li.s-ok .qty{border-color:var(--ok)} li.s-no .qty{border-color:var(--no)}
     <button class="no" data-k="no">✗<small>Not avail.</small></button>
     <button class="low" data-k="low">LOW<small>Less stock</small></button>
   </div>
-  <form class="qtyform" id="qtyform" hidden><label for="fqty">Stock quantity (pcs)<input id="fqty" type="number" inputmode="numeric" min="0" step="1" autocomplete="off" placeholder="0"></label><button class="btn main" type="submit">Save</button></form>
+  <form class="qtyform" id="qtyform" hidden><label for="fqty"><span id="fqtyl">Stock quantity (pcs)</span><input id="fqty" type="number" inputmode="numeric" min="0" step="1" autocomplete="off" placeholder="0"></label><button class="btn main" type="submit">Save</button></form>
   <div class="row">
     <button class="btn main" id="next">Scan next</button>
     <button class="btn" id="showit">Show in list</button>
@@ -285,22 +286,23 @@ const flat = D => D.flatMap(([b, its]) => its.map(([n, bc, nm, alt]) => ({n, bc,
 const MAIN_DATA = DATA, MAIN_ALL = flat(DATA), NEW_ALL = flat(NEW_DATA);
 let ALL = MAIN_ALL;
 const KEY = 'tili-msl-check-v1';
-let SA = {}, SN = {}, S = SA, Q = {}, MODE = 'avail', filter = null;
-try { const d = JSON.parse(localStorage.getItem(KEY) || '{}'); SA = d.s || {}; SN = d.sn || {}; S = SA; Q = d.q || {}; if (d.m === 'stock' || d.m === 'new') MODE = d.m; ['store','mname','mphone'].forEach(id => { if (d[id]) document.getElementById(id).value = d[id]; }); } catch (e) {}
-function save(){ try { localStorage.setItem(KEY, JSON.stringify({s:SA, sn:SN, q:Q, m:MODE, store:store.value, mname:mname.value, mphone:mphone.value})); } catch (e) {} }
+let SA = {}, SN = {}, S = SA, QS = {}, QO = {}, Q = QS, MODE = 'avail', filter = null;
+const isQ = () => MODE === 'stock' || MODE === 'order';
+try { const d = JSON.parse(localStorage.getItem(KEY) || '{}'); SA = d.s || {}; SN = d.sn || {}; S = SA; QS = d.q || {}; QO = d.qo || {}; Q = QS; if (['stock','new','order'].includes(d.m)) MODE = d.m; ['store','mname','mphone'].forEach(id => { if (d[id]) document.getElementById(id).value = d[id]; }); } catch (e) {}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify({s:SA, sn:SN, q:QS, qo:QO, m:MODE, store:store.value, mname:mname.value, mphone:mphone.value})); } catch (e) {} }
 document.getElementById('tot').textContent = ALL.length;
 const LBL = {ok:'✓', no:'✗', low:'LOW'};
 const list = document.getElementById('list');
 const has = n => Q[n] !== undefined && Q[n] !== '';
-const isDone = n => MODE === 'stock' ? has(n) : !!S[n];
-const rowCls = n => MODE === 'stock' ? (has(n) ? (+Q[n] > 0 ? 's-ok' : 's-no') : '') : (S[n] ? 's-' + S[n] : '');
+const isDone = n => isQ() ? has(n) : !!S[n];
+const rowCls = n => isQ() ? (has(n) ? (+Q[n] > 0 ? 's-ok' : 's-no') : '') : (S[n] ? 's-' + S[n] : '');
 
 function render(){
   const q = document.getElementById('q').value.trim().toLowerCase();
   let html = '', shown = 0;
   for (const [b, its] of DATA) {
     const rows = its.filter(([n, bc, nm]) => {
-      if (MODE === 'stock') {
+      if (isQ()) {
         if (filter === 'todo' && has(n)) return false;
         if (filter === 'ok' && !has(n)) return false;
         if (filter === 'no' && !(has(n) && +Q[n] === 0)) return false;
@@ -317,7 +319,7 @@ function render(){
     html += `<section><div class="bh"><h2>${b}</h2><small>${done}/${its.length}</small></div><ul>` +
       rows.map(([n, bc, nm]) => {
         const st = S[n] || '', nmE = nm.replace(/&/g,'&amp;').replace(/</g,'&lt;');
-        const right = MODE === 'stock'
+        const right = isQ()
           ? `<input class="qty" type="number" inputmode="numeric" min="0" step="1" enterkeyhint="next" data-n="${n}" value="${has(n) ? Q[n] : ''}" placeholder="Qty" aria-label="Stock for ${nmE.replace(/"/g,'')}">`
           : null;
         return `<li class="${rowCls(n)}" data-n="${n}"><div><div class="nm">${nmE}</div><div class="bc"><em>${n}</em>${bc}</div></div>` + (right !== null ? right + '</li>' :
@@ -328,7 +330,7 @@ function render(){
   tally();
 }
 function tally(){
-  if (MODE === 'stock') {
+  if (isQ()) {
     let cnt = 0, zero = 0, tot = 0; ALL.forEach(i => { if (has(i.n)) { cnt++; const v = +Q[i.n]; tot += v; if (v === 0) zero++; } });
     document.getElementById('c-todo').textContent = ALL.length - cnt; document.getElementById('c-ok').textContent = cnt;
     document.getElementById('c-no').textContent = zero; document.getElementById('c-low').textContent = tot.toLocaleString('en-US');
@@ -368,18 +370,20 @@ list.addEventListener('keydown', e => {
   e.preventDefault(); const all = [...list.querySelectorAll('.qty')], i = all.indexOf(e.target);
   if (all[i + 1]) { all[i + 1].focus(); all[i + 1].select(); } else e.target.blur();
 });
-const LABELS = {avail: ['To check','Available','Not avail.','Low'], stock: ['To count','Counted','Zero','Total pcs'], new: ['To check','Available','Not avail.','Low']};
+const LABELS = {avail: ['To check','Available','Not avail.','Low'], stock: ['To count','Counted','Zero','Total pcs'], new: ['To check','Available','Not avail.','Low'], order: ['No qty','Ordered','Zero','Total qty']};
 function setMode(m){
   MODE = m; filter = null;
-  if (m === 'new') { DATA = NEW_DATA; ALL = NEW_ALL; S = SN; } else { DATA = MAIN_DATA; ALL = MAIN_ALL; S = SA; }
+  if (m === 'new' || m === 'order') { DATA = NEW_DATA; ALL = NEW_ALL; } else { DATA = MAIN_DATA; ALL = MAIN_ALL; }
+  S = m === 'new' ? SN : SA; Q = m === 'order' ? QO : QS;
   save();
-  document.getElementById('tot').textContent = ALL.length; document.getElementById('totl').textContent = m === 'new' ? 'New items' : 'MSL';
+  document.getElementById('tot').textContent = ALL.length; document.getElementById('totl').textContent = m === 'order' ? 'Order' : m === 'new' ? 'New items' : 'MSL';
   if (window.codesReady) rebuildCodes();
   document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.m === m));
   ['todo','ok','no','low'].forEach((k, i) => document.getElementById('l-' + k).textContent = LABELS[m][i]);
   document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', false));
-  document.querySelector('.chip[data-f="low"]').disabled = m === 'stock';
-  document.getElementById('cf-t').textContent = m === 'stock' ? 'Clear all stock numbers?' : 'Clear all ticks?';
+  document.querySelector('.chip[data-f="low"]').disabled = isQ();
+  document.getElementById('cf-t').textContent = m === 'order' ? 'Clear the whole order?' : m === 'stock' ? 'Clear all stock numbers?' : 'Clear all ticks?';
+  document.getElementById('fqtyl').textContent = m === 'order' ? 'Order quantity' : 'Stock quantity (pcs)';
   render();
 }
 document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => { if (MODE !== b.dataset.m) setMode(b.dataset.m); }));
@@ -394,7 +398,14 @@ document.getElementById('store').addEventListener('input', e => { if (e.target.v
 
 function report(){
   const d = new Date(), ds = d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-  if (MODE === 'stock') {
+  if (MODE === 'order') {
+    const k = tally(); let out = '', lb = '';
+    ALL.filter(i => has(i.n) && +Q[i.n] > 0).forEach(i => { if (i.b !== lb) { out += `_${i.b}_\n`; lb = i.b; } out += `• ${i.nm} — ${i.bc}: *${Q[i.n]}*\n`; });
+    const t = `*ORDER — Tili Star Trading*\nStore: ${store.value || '-'}\nOrdered by: ${mname.value || '-'}\nPhone: ${mphone.value || '-'}\nDate: ${ds}\n\n` +
+      `Items: ${k.cnt - k.zero}\nTotal qty: ${k.tot}\n` + (out ? `\n*ORDER LINES*\n` + out : '\nNo quantities entered.\n');
+    return {t, todo: 0};
+  }
+  if (isQ()) {
     const k = tally(), todo = ALL.length - k.cnt; let out = '', lb = '';
     ALL.filter(i => has(i.n)).forEach(i => { if (i.b !== lb) { out += `_${i.b}_\n`; lb = i.b; } out += `• ${i.nm} — ${i.bc}: *${Q[i.n]}*\n`; });
     const t = `*STOCK REPORT — Tili Star Trading*\nStore: ${store.value || '-'}\nMerchandiser: ${mname.value || '-'}\nPhone: ${mphone.value || '-'}\nDate: ${ds}\n\n` +
@@ -411,7 +422,8 @@ function report(){
 const sheet = document.getElementById('sheet');
 const CSS = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 function summary(){
-  if (MODE === 'stock') { const k = tally(); return [[k.cnt, 'Counted', CSS('--ok')], [k.tot.toLocaleString('en-US'), 'Total pcs', CSS('--fg')], [k.zero, 'Zero', CSS('--no')], [ALL.length - k.cnt, 'Not counted', CSS('--muted')]]; }
+  if (MODE === 'order') { const k = tally(); return [[k.cnt - k.zero, 'Items', CSS('--ok')], [k.tot.toLocaleString('en-US'), 'Total qty', CSS('--fg')], [k.zero, 'Zero', CSS('--no')], [ALL.length - k.cnt, 'No qty', CSS('--muted')]]; }
+  if (isQ()) { const k = tally(); return [[k.cnt, 'Counted', CSS('--ok')], [k.tot.toLocaleString('en-US'), 'Total pcs', CSS('--fg')], [k.zero, 'Zero', CSS('--no')], [ALL.length - k.cnt, 'Not counted', CSS('--muted')]]; }
   const c = tally(); return [[c.ok, 'Available', CSS('--ok')], [c.no, 'Not avail.', CSS('--no')], [c.low, 'Low', CSS('--low')], [ALL.length - c.ok - c.no - c.low, 'Not checked', CSS('--muted')]];
 }
 /* ---------- PDF report ---------- */
@@ -420,26 +432,27 @@ try { if (window.claude && window.claude.use) window.claude.use('downloads').the
 function pdfName(){
   const d = new Date(), ds = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   const st = (store.value.trim() || 'Store').replace(/[^\w\- ]+/g, '').replace(/\s+/g, '_').slice(0, 40);
-  return (MODE === 'stock' ? 'Stock_Report_' : MODE === 'new' ? 'New_Items_Report_' : 'Availability_Report_') + st + '_' + ds + '.pdf';
+  return (MODE === 'order' ? 'Order_' : isQ() ? 'Stock_Report_' : MODE === 'new' ? 'New_Items_Report_' : 'Availability_Report_') + st + '_' + ds + '.pdf';
 }
 function buildPdf(){
   const J = window.jspdf; if (!J || !J.jsPDF) throw new Error('nolib');
   const doc = new J.jsPDF({unit: 'mm', format: 'a4'}), PW = 210, M = 12;
   const NAVY = [31, 42, 68], GOLD = [192, 149, 31], OK = [46, 125, 50], NO = [198, 40, 40], LOW = [199, 122, 0], MUT = [110, 118, 135];
   const d = new Date(), ds = d.toLocaleDateString('en-GB') + '  ' + d.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
-  const stock = MODE === 'stock';
+  const stock = isQ();
   doc.setFillColor(...NAVY); doc.rect(0, 0, PW, 24, 'F'); doc.setFillColor(...GOLD); doc.rect(0, 24, PW, 1, 'F');
-  doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(17); doc.text(stock ? 'STOCK REPORT' : MODE === 'new' ? 'NEW ITEMS REPORT' : 'AVAILABILITY REPORT', M, 13);
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.text((MODE === 'new' ? 'New items availability  |  ' : 'MSL store check  |  ') + ALL.length + ' SKUs', M, 19);
+  doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(17); doc.text(MODE === 'order' ? 'ORDER' : stock ? 'STOCK REPORT' : MODE === 'new' ? 'NEW ITEMS REPORT' : 'AVAILABILITY REPORT', M, 13);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.text((MODE === 'order' ? 'Order form  |  ' : MODE === 'new' ? 'New items availability  |  ' : 'MSL store check  |  ') + ALL.length + ' SKUs', M, 19);
   doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('TILI STAR TRADING L.L.C', PW - M, 12, {align: 'right'});
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(174, 182, 206); doc.text(ds, PW - M, 18, {align: 'right'});
-  const info = [['Store', store.value.trim() || '-'], ['Merchandiser', mname.value.trim() || '-'], ['Phone', mphone.value.trim() || '-'], ['Date', ds]];
+  const info = [['Store', store.value.trim() || '-'], [MODE === 'order' ? 'Ordered by' : 'Merchandiser', mname.value.trim() || '-'], ['Phone', mphone.value.trim() || '-'], ['Date', ds]];
   let y = 34;
   info.forEach(([k, v], i) => { const x = M + (i % 2) * 96, yy = y + Math.floor(i / 2) * 8;
     doc.setTextColor(...MUT); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.text(k.toUpperCase(), x, yy);
     doc.setTextColor(20, 26, 40); doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.text(String(v).slice(0, 48), x + 26, yy); });
   y = 50;
-  const sm = stock ? (() => { const k = tally(); return [[k.cnt, 'COUNTED', OK], [k.tot.toLocaleString('en-US'), 'TOTAL PCS', NAVY], [k.zero, 'ZERO STOCK', NO], [ALL.length - k.cnt, 'NOT COUNTED', MUT]]; })()
+  const sm = MODE === 'order' ? (() => { const k = tally(); return [[k.cnt - k.zero, 'ITEMS', OK], [k.tot.toLocaleString('en-US'), 'TOTAL QTY', NAVY], [k.zero, 'ZERO', NO], [ALL.length - k.cnt, 'NO QTY', MUT]]; })()
+         : stock ? (() => { const k = tally(); return [[k.cnt, 'COUNTED', OK], [k.tot.toLocaleString('en-US'), 'TOTAL PCS', NAVY], [k.zero, 'ZERO STOCK', NO], [ALL.length - k.cnt, 'NOT COUNTED', MUT]]; })()
                    : (() => { const c = tally(); return [[c.ok, 'AVAILABLE', OK], [c.no, 'NOT AVAILABLE', NO], [c.low, 'LESS STOCK', LOW], [ALL.length - c.ok - c.no - c.low, 'NOT CHECKED', MUT]]; })();
   const bw = (PW - 2 * M - 9) / 4;
   sm.forEach(([v, l, col], i) => { const x = M + i * (bw + 3);
@@ -459,7 +472,12 @@ function buildPdf(){
     y = doc.lastAutoTable.finalY + 8;
   };
   const row = i => [i.n, i.bc, i.b, i.nm];
-  if (stock) {
+  if (MODE === 'order') {
+    const lines = ALL.filter(i => has(i.n) && +Q[i.n] > 0), tot = lines.reduce((a, i) => a + +Q[i.n], 0);
+    section('ORDER LINES (' + lines.length + ')', NAVY, lines.length ? lines.map(i => row(i).concat(String(Q[i.n]))).concat([['', '', '', 'TOTAL', String(tot)]]) : [['', '', '', 'No quantities entered', '-']], ['#', 'BARCODE', 'BRAND', 'ITEM', 'QTY'], {
+      columnStyles: {0: {halign: 'center', cellWidth: 9, textColor: MUT}, 1: {halign: 'center', cellWidth: 27}, 2: {cellWidth: 26, fontStyle: 'bold', fontSize: 7}, 4: {halign: 'center', cellWidth: 22, fontStyle: 'bold', fontSize: 10}},
+      didParseCell: h => { if (h.section === 'body' && h.row.index === lines.length && lines.length) { h.cell.styles.fontStyle = 'bold'; h.cell.styles.fillColor = [232, 236, 245]; if (h.column.index === 3) h.cell.styles.halign = 'right'; } }});
+  } else if (stock) {
     const zero = ALL.filter(i => has(i.n) && +Q[i.n] === 0);
     if (zero.length) section('ZERO STOCK (' + zero.length + ')', NO, zero.map(row), ['#', 'BARCODE', 'BRAND', 'ITEM']);
     section('STOCK BY ITEM', NAVY, ALL.map(i => row(i).concat(has(i.n) ? String(Q[i.n]) : '-')), ['#', 'BARCODE', 'BRAND', 'ITEM', 'QTY (PCS)'], {
@@ -512,8 +530,8 @@ document.getElementById('send').addEventListener('click', () => {
   document.getElementById('report').textContent = t;
   const w = document.getElementById('sh-warn'), miss = [];
   if (!mname.value.trim()) miss.push('your name');
-  const msgs = []; if (miss.length) msgs.push('Add ' + miss.join(' and ') + ' at the top.'); if (todo) msgs.push(todo + (MODE === 'stock' ? ' items not counted yet.' : ' items not checked yet.'));
-  document.getElementById('sh-title').textContent = MODE === 'stock' ? 'Stock report' : MODE === 'new' ? 'New items report' : 'Availability report';
+  const msgs = []; if (miss.length) msgs.push('Add ' + miss.join(' and ') + ' at the top.'); if (todo) msgs.push(todo + (isQ() ? ' items not counted yet.' : ' items not checked yet.'));
+  document.getElementById('sh-title').textContent = MODE === 'order' ? 'Order' : isQ() ? 'Stock report' : MODE === 'new' ? 'New items report' : 'Availability report';
   w.textContent = msgs.join(' '); w.hidden = !msgs.length;
   document.getElementById('wa').href = 'https://wa.me/?text=' + encodeURIComponent(t);
   document.getElementById('tg').href = 'https://t.me/share/url?url=' + encodeURIComponent(t);
@@ -532,7 +550,7 @@ document.getElementById('copy').addEventListener('click', e => {
 const conf = document.getElementById('confirm');
 document.getElementById('reset').addEventListener('click', () => conf.hidden = false);
 document.getElementById('cancel').addEventListener('click', () => conf.hidden = true);
-document.getElementById('doclear').addEventListener('click', () => { if (MODE === 'stock') Q = {}; else for (const k in S) delete S[k]; save(); conf.hidden = true; filter = null; document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', false)); render(); });
+document.getElementById('doclear').addEventListener('click', () => { if (isQ()) { for (const k in Q) delete Q[k]; } else for (const k in S) delete S[k]; save(); conf.hidden = true; filter = null; document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', false)); render(); });
 [sheet, conf, document.getElementById("found")].forEach(s => s.addEventListener('click', e => { if (e.target === s) s.hidden = true; }));
 const store = document.getElementById('store'), mname = document.getElementById('mname'), mphone = document.getElementById('mphone');
 setMode(MODE);
@@ -642,10 +660,10 @@ function showFound(item, code){
   if (item) {
     hitEl.innerHTML = `<div class="hit"><span class="b">${esc(item.b)} · #${item.n}</span><span class="n">${esc(item.nm)}</span><span class="c">${item.bc}</span></div>`;
     const qf = document.getElementById('qtyform');
-    big.hidden = MODE === 'stock'; qf.hidden = MODE !== 'stock'; document.getElementById('showit').hidden = false; syncBig();
-    if (MODE === 'stock') { const fi = document.getElementById('fqty'); fi.value = has(item.n) ? Q[item.n] : ''; setTimeout(() => { fi.focus(); fi.select(); }, 60); }
+    big.hidden = isQ(); qf.hidden = !isQ(); document.getElementById('showit').hidden = false; syncBig();
+    if (isQ()) { const fi = document.getElementById('fqty'); fi.value = has(item.n) ? Q[item.n] : ''; setTimeout(() => { fi.focus(); fi.select(); }, 60); }
   } else {
-    hitEl.innerHTML = `<div class="hit miss"><span class="b">${MODE === 'new' ? 'Not in new items' : 'Not in MSL list'}</span><span class="n">No item with this barcode</span><span class="c">${esc(code)}</span></div>`;
+    hitEl.innerHTML = `<div class="hit miss"><span class="b">${MODE === 'new' || MODE === 'order' ? 'Not in new items' : 'Not in MSL list'}</span><span class="n">No item with this barcode</span><span class="c">${esc(code)}</span></div>`;
     big.hidden = true; document.getElementById('qtyform').hidden = true; document.getElementById('showit').hidden = true;
   }
   foundS.hidden = false;
@@ -666,8 +684,8 @@ function renderLog(){
   const el = document.getElementById('log');
   if (!LOG.length) { el.innerHTML = ''; return; }
   el.innerHTML = '<h4>Recent scans</h4>' + LOG.map((x, i) => {
-    const it = x.n ? ALL.find(a => a.n === x.n) : null, st = it && MODE !== 'stock' ? S[it.n] : null;
-    const tg = MODE === 'stock' ? (it ? (has(it.n) ? Q[it.n] : '–') : '?') : (st ? LBL[st] : (it ? '–' : '?'));
+    const it = x.n ? ALL.find(a => a.n === x.n) : null, st = it && !isQ() ? S[it.n] : null;
+    const tg = isQ() ? (it ? (has(it.n) ? Q[it.n] : '–') : '?') : (st ? LBL[st] : (it ? '–' : '?'));
     return `<button data-i="${i}"><span>${it ? esc(it.nm) : 'Not in list · ' + esc(x.code)}</span><span class="tag ${st || ''}">${tg}</span></button>`;
   }).join('');
 }
